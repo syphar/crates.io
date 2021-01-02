@@ -18,5 +18,5 @@ begin
 end
 $$ LANGUAGE PLPGSQL;
 
--- reindex
-SELECT trigger_crates_name_search() FROM crates;
+-- reindex, `trigger_crates_name_search` is called `BEFORE INSERT OR UPDATE OF updated_at`
+UPDATE crates SET updated_at = updated_at;

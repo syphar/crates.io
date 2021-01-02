@@ -64,24 +64,31 @@ pub fn search(req: &mut dyn RequestExt) -> EndpointResult {
 
             let q = sql::<TsQuery>("plainto_tsquery('english', ")
                 .bind::<Text, _>(q_string)
-                .sql(")");
-            query = query.filter(
-                q.clone()
-                    .matches(crates::textsearchable_index_col)
-                    .or(Crate::loosly_matches_name(&q_string)),
-            );
+                .sql(")")
+                .or(sql::<TsQuery>("plainto_tsquery('simple', ")
+                    .bind::<Text, _>(q_string)
+                    .sql(")"));
+
+            query = query.filter(q.clone().matches(crates::textsearchable_index_col));
 
             query = query.select((
                 ALL_COLUMNS,
                 Crate::with_name(q_string),
                 recent_crate_downloads::downloads.nullable(),
             ));
+
+            // to bring the exact match to the first position
             query = query.order(Crate::with_name(q_string).desc());
 
             if sort == "relevance" {
                 let rank = ts_rank_cd(crates::textsearchable_index_col, q);
                 query = query.then_order_by(rank.desc())
             }
+
+            use diesel::debug_query;
+            use diesel::pg::Pg;
+            let q = debug_query::<Pg, _>(&query);
+            println!("SQL: {}", q.to_string());
         }
     }
 
