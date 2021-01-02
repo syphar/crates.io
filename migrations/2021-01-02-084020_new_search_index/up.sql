@@ -14,8 +14,8 @@ begin
         setweight(to_tsvector('pg_catalog.simple', coalesce(kws, '')), 'B') ||
 
         -- for description and readme we use the normal english index
-        setweight(to_tsvector('pg_catalog.english', coalesce(new.description, '')), 'C')
-        --setweight(to_tsvector('pg_catalog.english', coalesce(new.readme, '')), 'D')
+        setweight(to_tsvector('pg_catalog.english', coalesce(new.description, '')), 'C') ||
+        setweight(to_tsvector('pg_catalog.english', coalesce(new.readme, '')), 'D')
         ;
 
   return new;

@@ -69,7 +69,11 @@ pub fn search(req: &mut dyn RequestExt) -> EndpointResult {
                     .bind::<Text, _>(q_string)
                     .sql(")"));
 
-            query = query.filter(q.clone().matches(crates::textsearchable_index_col));
+            query = query.filter(
+                q.clone()
+                    .matches(crates::textsearchable_index_col)
+                    .or(Crate::loosly_matches_name(&q_string)),
+            );
 
             query = query.select((
                 ALL_COLUMNS,

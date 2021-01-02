@@ -204,6 +204,28 @@ impl<'a> NewCrate<'a> {
 }
 
 impl Crate {
+    /// SQL filter based on whether the crate's name loosely matches the given
+    /// string.
+    ///
+    /// The operator used varies based on the input.
+    pub fn loosly_matches_name<QS>(
+        name: &str,
+    ) -> Box<dyn BoxableExpression<QS, Pg, SqlType = Bool> + '_>
+    where
+        crates::name: SelectableExpression<QS>,
+    {
+        if name.len() > 2 {
+            let wildcard_name = format!("%{}%", name);
+            Box::new(canon_crate_name(crates::name).like(canon_crate_name(wildcard_name)))
+        } else {
+            diesel_infix_operator!(MatchesWord, "%>");
+            Box::new(MatchesWord::new(
+                canon_crate_name(crates::name),
+                name.into_sql::<Text>(),
+            ))
+        }
+    }
+
     /// SQL filter with the = binary operator
     pub fn with_name(name: &str) -> WithName<'_> {
         canon_crate_name(crates::name).eq(canon_crate_name(name))
@@ -213,7 +235,8 @@ impl Crate {
         Crate::all().filter(Self::with_name(name))
     }
 
-    pub fn by_exact_name(name: &str) -> ByExactName<'_> { Crate::all().filter(crates::name.eq(name))
+    pub fn by_exact_name(name: &str) -> ByExactName<'_> {
+        Crate::all().filter(crates::name.eq(name))
     }
 
     pub fn all() -> All {
