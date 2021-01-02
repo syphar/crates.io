@@ -11,7 +11,8 @@ begin
     new.textsearchable_index_col :=
         -- simple catalog has no stop-words and no stemming.
         setweight(to_tsvector('pg_catalog.simple', coalesce(new.name, '')), 'A') ||
-        setweight(to_tsvector('pg_catalog.simple', coalesce(kws, '')), 'A')
+        setweight(to_tsvector('pg_catalog.simple', coalesce(kws, '')), 'B')
+        ;
 
         -- for description and readme we use the normal english index
         -- setweight(to_tsvector('pg_catalog.english', coalesce(new.description, '')), 'D') ||
