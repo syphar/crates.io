@@ -11,12 +11,12 @@ begin
     new.textsearchable_index_col :=
         -- simple catalog has no stop-words and no stemming.
         setweight(to_tsvector('pg_catalog.simple', coalesce(new.name, '')), 'A') ||
-        setweight(to_tsvector('pg_catalog.simple', coalesce(kws, '')), 'B')
-        ;
+        setweight(to_tsvector('pg_catalog.simple', coalesce(kws, '')), 'B') ||
 
         -- for description and readme we use the normal english index
-        -- setweight(to_tsvector('pg_catalog.english', coalesce(new.description, '')), 'D') ||
-        --setweight(to_tsvector('pg_catalog.english', coalesce(new.readme, '')), 'D');
+        setweight(to_tsvector('pg_catalog.english', coalesce(new.description, '')), 'C')
+        --setweight(to_tsvector('pg_catalog.english', coalesce(new.readme, '')), 'D')
+        ;
 
   return new;
 end
@@ -24,3 +24,5 @@ $$ LANGUAGE PLPGSQL;
 
 -- reindex, `trigger_crates_name_search` is called `BEFORE INSERT OR UPDATE OF updated_at`
 UPDATE crates SET updated_at = updated_at;
+
+ANALYZE crates;

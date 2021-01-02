@@ -1,4 +1,4 @@
-SELECT
+explain analyze SELECT
 (rank_download_percent * 2 + rank_full_text) AS combined_rank,
 aa.*
 
@@ -9,16 +9,12 @@ FROM (
         sum(ii.downloads) AS downloads,
         max(
             ts_rank_cd(
-                '{0.00, 0.2, 0.4, 1.0}',
-                textsearchable_index_col, to_tsquery('english', 'serde json') || to_tsquery('simple', 'serde json'),
+                '{0.00, 0.0, 0.4, 1.0}',
+                textsearchable_index_col, plainto_tsquery('english', 'serde json') || plainto_tsquery('simple', 'serde json'),
                 0
             )
         ) AS rank_full_text,
-        max(rank_number) AS rank_number,
-        max(last_value) AS last_value,
-        max(rank_download_percent) AS rank_download_percent,
-        sum(ii.downloads) / 1000000.0 AS rank_million_downloads,
-        ii.textsearchable_index_col
+        max(rank_download_percent) AS rank_download_percent
 
     FROM (
         SELECT
@@ -26,15 +22,13 @@ FROM (
             c.name,
             c.downloads,
             c.textsearchable_index_col,
-            cume_dist() OVER (ORDER BY downloads ASC) AS rank_number,
-            last_value(downloads) OVER (ORDER BY downloads ASC) AS last_value,
             percent_rank() OVER (ORDER BY downloads ASC) AS rank_download_percent
 
         FROM crates AS c
 
         WHERE
-            to_tsquery('english', 'serde json') || to_tsquery('simple', 'serde json') @@ c.textsearchable_index_col
-            OR (c.name like '%serde%' AND c.name like '%json%')
+            plainto_tsquery('english', 'serde json') || plainto_tsquery('simple', 'serde json') @@ c.textsearchable_index_col
+
     ) AS ii
 
     LEFT OUTER JOIN crates_keywords AS ck ON ii.id = ck.crate_id
