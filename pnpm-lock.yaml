@@ -158,8 +158,8 @@ devDependencies:
     specifier: 4.0.1
     version: 4.0.1(@babel/core@7.24.0)(@glimmer/tracking@1.1.2)(@glint/template@1.3.0)(ember-source@5.7.0)
   ember-css-modules:
-    specifier: 2.0.1
-    version: 2.0.1
+    specifier: 2.1.0
+    version: 2.1.0
   ember-data:
     specifier: 4.12.5
     version: 4.12.5(@babel/core@7.24.0)(@ember/string@3.1.1)(@glimmer/tracking@1.1.2)(@glint/template@1.3.0)(ember-source@5.7.0)(webpack@5.90.3)
@@ -8456,8 +8456,8 @@ packages:
       - supports-color
     dev: true
 
-  /ember-css-modules@2.0.1:
-    resolution: {integrity: sha512-SsWrVqmzymljS/yzpbJHAMPZaoh6xMyy2N26GWA3vnwgPE6S+jbErv+9RaSeqPlUZR1YE1LkhHleFcTSM9FOUA==}
+  /ember-css-modules@2.1.0:
+    resolution: {integrity: sha512-xD4RJNaVX8QqqCRpKSE/JFB4CMVLqSFJIf0ijPkEDFbtj2N7M1nuMq+FjYpkLkymn5fWkJpTqvkF75RJKxwTtw==}
     engines: {node: 12.* || 14.* || >= 16}
     dependencies:
       broccoli-bridge: 1.0.0
