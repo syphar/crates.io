@@ -116,7 +116,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:13@sha256:eee22204934b36935237e7c92355e3178cfdf3c5377dec9c19c848115cc4637b
+        image: postgres:16@sha256:4aea012537edfad80f98d870a36e6b90b4c09b27be7f4b4759d72db863baeebb
         env:
           POSTGRES_PASSWORD: postgres
         # Set health checks to wait until postgres has started
