@@ -63,7 +63,7 @@
     "@ember/test-waiters": "3.1.0",
     "@embroider/compat": "3.4.6",
     "@embroider/core": "3.4.6",
-    "@embroider/webpack": "3.2.2",
+    "@embroider/webpack": "4.0.0",
     "@glimmer/component": "1.1.2",
     "@glimmer/tracking": "1.1.2",
     "@mainmatter/ember-api-actions": "0.6.0",
