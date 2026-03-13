@@ -17,7 +17,7 @@ use std::path::{Component, Path, PathBuf};
 use std::str::FromStr;
 use tokio::io::{AsyncReadExt, BufReader};
 use tokio_tar::Entry;
-use tracing::instrument;
+use tracing::{instrument, warn};
 
 #[cfg(any(feature = "builder", test))]
 mod builder;
@@ -87,7 +87,9 @@ pub async fn process_tarball<R: tokio::io::AsyncRead + Unpin>(
         // Check that the file size is consistent between the pax and tar
         // headers. We have to do this before anything else because iterating
         // the pax headers requires a mutable reference to entry.
-        validate_pax_size(&mut entry).await?;
+        validate_pax_size(&mut entry).await.inspect_err(|e| {
+            warn!(%e, ?entry, pkg_name, "file size validation failure");
+        })?;
 
         // Verify that all entries actually start with `$name-$vers/`.
         // Historically Cargo didn't verify this on extraction so you could
