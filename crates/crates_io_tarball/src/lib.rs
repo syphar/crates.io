@@ -16,7 +16,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Component, Path, PathBuf};
 use std::str::FromStr;
 use tokio::io::{AsyncReadExt, BufReader};
-use tracing::instrument;
+use tokio_tar::Entry;
+use tracing::{instrument, warn};
 
 #[cfg(any(feature = "builder", test))]
 mod builder;
@@ -38,6 +39,10 @@ pub enum TarballError {
     Malformed(#[source] std::io::Error),
     #[error("invalid path found: {0}")]
     InvalidPath(String),
+    #[error("malformed pax size")]
+    MalformedPaxSize,
+    #[error("mismatched pax and tar header sizes")]
+    SizeMismatch,
     #[error("unexpected symlink or hard link found: {0}")]
     UnexpectedSymlink(String),
     #[error("Cargo.toml manifest is missing")]
@@ -78,6 +83,13 @@ pub async fn process_tarball<R: tokio::io::AsyncRead + Unpin>(
 
     while let Some(entry) = entries.next().await {
         let mut entry = entry.map_err(TarballError::Malformed)?;
+
+        // Check that the file size is consistent between the pax and tar
+        // headers. We have to do this before anything else because iterating
+        // the pax headers requires a mutable reference to entry.
+        validate_pax_size(&mut entry).await.inspect_err(|e| {
+            warn!(%e, ?entry, pkg_name, "file size validation failure");
+        })?;
 
         // Verify that all entries actually start with `$name-$vers/`.
         // Historically Cargo didn't verify this on extraction so you could
@@ -147,6 +159,45 @@ pub async fn process_tarball<R: tokio::io::AsyncRead + Unpin>(
     manifest.complete_from_abstract_filesystem(&PathsFileSystem(paths))?;
 
     Ok(TarballInfo { manifest, vcs_info })
+}
+
+async fn validate_pax_size<R: tokio::io::AsyncRead + Unpin>(
+    entry: &mut Entry<R>,
+) -> Result<(), TarballError> {
+    // Ensure that, if we have both tar and pax header file sizes, they match so
+    // that downstream users of crates cannot be subjected to confusion attacks
+    // if they prioritise those headers differently when deciding on the source
+    // of truth.
+    //
+    // It's not an error to not have a pax header — while Cargo will always
+    // include them, as will pretty much every modern tar implementation, it's
+    // really not an issue if it's not there. It's just an issue if it doesn't
+    // match.
+    //
+    // Note that this implies the files cannot be larger than the limit in
+    // legacy tar headers, which is 8 GiB. In practice, this should not be an
+    // issue for crates.io given our other limits.
+
+    let tar_size = entry.header().size().map_err(TarballError::Malformed)?;
+
+    if let Some(pax) = entry.pax_extensions().await? {
+        for ext_result in pax {
+            let ext = ext_result.map_err(TarballError::Malformed)?;
+            if ext.key().is_ok_and(|key| key == "size") {
+                let pax_size = ext
+                    .value()
+                    .map_err(|_| TarballError::MalformedPaxSize)?
+                    .parse::<u64>()
+                    .map_err(|_| TarballError::MalformedPaxSize)?;
+
+                if pax_size != tar_size {
+                    return Err(TarballError::SizeMismatch);
+                }
+            }
+        }
+    }
+
+    Ok(())
 }
 
 struct PathsFileSystem(Vec<PathBuf>);
@@ -349,6 +400,48 @@ mod tests {
 
         let err = assert_err!(process(vec!["Cargo.toml", "cargo.toml", "CARGO.TOML"]).await);
         assert_snapshot!(err, @r#"more than one Cargo.toml manifest in tarball: ["foo-0.0.1/CARGO.TOML", "foo-0.0.1/Cargo.toml", "foo-0.0.1/cargo.toml"]"#);
+    }
+
+    #[tokio::test]
+    async fn process_tarball_test_size_malformed() {
+        // There are two cases here: one where the size value is invalid UTF-8,
+        // and another where it's just not a number.
+        //
+        // We have to build this with the regular `tar` crate.
+
+        let tarball = TarballBuilder::new()
+            .add_pax_extensions([("size", b"\xff\xfe".as_slice())])
+            .add_file("foo-0.0.1/Cargo.toml", MANIFEST)
+            .build();
+
+        let err = assert_err!(process_tarball("foo-0.0.1", &*tarball, MAX_SIZE).await);
+        assert_snapshot!(err, @"uploaded tarball is malformed or too large when decompressed");
+
+        let tarball = TarballBuilder::new()
+            .add_pax_extensions([("size", b"not-a-valid-number".as_slice())])
+            .add_file("foo-0.0.1/Cargo.toml", MANIFEST)
+            .build();
+
+        let err = assert_err!(process_tarball("foo-0.0.1", &*tarball, MAX_SIZE).await);
+        assert_snapshot!(err, @"uploaded tarball is malformed or too large when decompressed");
+    }
+
+    #[tokio::test]
+    async fn process_tarball_test_size_mismatch() {
+        // Build up a tarball with a mismatch between its pax and tar header
+        // sizes.
+        let tarball = TarballBuilder::new()
+            // Set the pax size to a larger value.
+            .add_pax_extensions([("size", "2048".as_bytes())])
+            // Add the real content, which is less than a single tar block (512
+            // bytes).
+            .add_file("foo-0.0.1/Cargo.toml", MANIFEST)
+            // Add a symlink in the overlap.
+            .add_symlink("smuggled", "/etc/issue")
+            .build();
+
+        let err = assert_err!(process_tarball("foo-0.0.1", &*tarball, MAX_SIZE).await);
+        assert_snapshot!(err, @"mismatched pax and tar header sizes");
     }
 
     #[tokio::test]

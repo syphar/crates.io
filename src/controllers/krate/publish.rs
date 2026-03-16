@@ -1024,6 +1024,9 @@ impl From<TarballError> for BoxedAppError {
             TarballError::Malformed(_err) => {
                 bad_request("uploaded tarball is malformed or too large when decompressed")
             }
+            TarballError::MalformedPaxSize | TarballError::SizeMismatch => {
+                bad_request("uploaded tarball is malformed")
+            }
             TarballError::InvalidPath(path) => bad_request(format!("invalid path found: {path}")),
             TarballError::UnexpectedSymlink(path) => {
                 bad_request(format!("unexpected symlink or hard link found: {path}"))

@@ -22,6 +22,27 @@ impl TarballBuilder {
         self
     }
 
+    pub fn add_pax_extensions<'key, 'value, I>(mut self, headers: I) -> Self
+    where
+        I: IntoIterator<Item = (&'key str, &'value [u8])>,
+    {
+        self.inner.append_pax_extensions(headers).unwrap();
+
+        self
+    }
+
+    pub fn add_symlink(mut self, path: &str, target: &str) -> Self {
+        let mut header = tar::Header::new_gnu();
+        header.set_path(path).unwrap();
+        header.set_link_name(target).unwrap();
+        header.set_size(0);
+        header.set_cksum();
+
+        self.inner.append(&header, b"".as_slice()).unwrap();
+
+        self
+    }
+
     pub fn build_unzipped(self) -> Vec<u8> {
         self.inner.into_inner().unwrap()
     }
