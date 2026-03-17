@@ -7,6 +7,7 @@ const DOMAIN_BLOCKLIST: &[&str] = &[
     "rustless.org",
     "ironframework.io",
     "nebulanet.cc",
+    "esp-rs.org",
 ];
 
 /// Return `None` if the documentation URL host matches a blocked host
