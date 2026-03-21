@@ -99,8 +99,8 @@ pub async fn run(opts: Opts) -> anyhow::Result<()> {
     let sparse_index_job = jobs::SyncToSparseIndex::new(crate_name);
 
     if let Err(error) = tokio::try_join!(
-        git_index_job.enqueue(&mut conn),
-        sparse_index_job.enqueue(&mut conn),
+        git_index_job.enqueue(&conn),
+        sparse_index_job.enqueue(&conn),
     ) {
         warn!(%crate_name, "Failed to enqueue background job: {error}");
     }
@@ -127,7 +127,7 @@ pub async fn run(opts: Opts) -> anyhow::Result<()> {
     }
 
     if let Err(e) = jobs::InvalidateCdns::new(paths.into_iter())
-        .enqueue(&mut conn)
+        .enqueue(&conn)
         .await
     {
         warn!("{crate_name}: Failed to enqueue CDN invalidation background job: {e}");

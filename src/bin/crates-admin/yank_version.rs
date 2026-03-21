@@ -72,9 +72,9 @@ async fn yank(opts: Opts, conn: &mut AsyncPgConnection) -> anyhow::Result<()> {
     let update_default_version_job = UpdateDefaultVersion::new(krate.id);
 
     tokio::try_join!(
-        git_index_job.enqueue(conn),
-        sparse_index_job.enqueue(conn),
-        update_default_version_job.enqueue(conn),
+        git_index_job.enqueue(&*conn),
+        sparse_index_job.enqueue(&*conn),
+        update_default_version_job.enqueue(&*conn),
     )?;
 
     Ok(())

@@ -41,10 +41,10 @@ pub trait BackgroundJob: Serialize + DeserializeOwned + Send + Sync + 'static {
     fn run(&self, ctx: Self::Context) -> impl Future<Output = anyhow::Result<()>> + Send;
 
     #[instrument(name = "swirl.enqueue", skip(self, conn), fields(message = Self::JOB_NAME))]
-    fn enqueue(
+    fn enqueue<'a>(
         &self,
-        conn: &mut AsyncPgConnection,
-    ) -> BoxFuture<'_, Result<Option<i64>, EnqueueError>> {
+        conn: &'a AsyncPgConnection,
+    ) -> BoxFuture<'a, Result<Option<i64>, EnqueueError>> {
         let data = match serde_json::to_value(self) {
             Ok(data) => data,
             Err(err) => return async move { Err(EnqueueError::SerializationError(err)) }.boxed(),
@@ -62,7 +62,7 @@ pub trait BackgroundJob: Serialize + DeserializeOwned + Send + Sync + 'static {
 }
 
 fn enqueue_deduplicated<'a>(
-    conn: &mut AsyncPgConnection,
+    mut conn: &'a AsyncPgConnection,
     job_type: &'a str,
     data: Value,
     priority: i16,
@@ -90,13 +90,13 @@ fn enqueue_deduplicated<'a>(
             background_jobs::priority,
         ))
         .returning(background_jobs::id)
-        .get_result::<i64>(conn);
+        .get_result::<i64>(&mut conn);
 
     async move { Ok(future.await.optional()?) }.boxed()
 }
 
 fn enqueue_simple<'a>(
-    conn: &mut AsyncPgConnection,
+    mut conn: &'a AsyncPgConnection,
     job_type: &'a str,
     data: Value,
     priority: i16,
@@ -108,7 +108,7 @@ fn enqueue_simple<'a>(
             background_jobs::priority.eq(priority),
         ))
         .returning(background_jobs::id)
-        .get_result(conn);
+        .get_result(&mut conn);
 
     async move { Ok(future.await?) }.boxed()
 }

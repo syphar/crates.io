@@ -75,8 +75,8 @@ pub async fn update_version(
     .await?;
 
     let (actions, published_by) = tokio::try_join!(
-        VersionOwnerAction::by_version(&mut conn, &version),
-        version.published_by(&mut conn),
+        VersionOwnerAction::by_version(&conn, &version),
+        version.published_by(&conn),
     )?;
     let version = EncodableVersion::from(version, &krate.name, published_by, actions);
     Ok(Json(UpdateResponse { version }))
@@ -184,9 +184,9 @@ pub async fn perform_version_yank_update(
     let update_default_version_job = UpdateDefaultVersion::new(krate.id);
 
     tokio::try_join!(
-        git_index_job.enqueue(conn),
-        sparse_index_job.enqueue(conn),
-        update_default_version_job.enqueue(conn),
+        git_index_job.enqueue(&*conn),
+        sparse_index_job.enqueue(&*conn),
+        update_default_version_job.enqueue(&*conn),
     )?;
 
     Ok(())

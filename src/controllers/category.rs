@@ -58,16 +58,16 @@ pub async fn list_categories(
     // to paginate this.
     let options = PaginationOptions::builder().gather(&req)?;
 
-    let mut conn = app.db_read().await?;
+    let conn = app.db_read().await?;
 
     let sort = params.sort.as_ref().map_or("alpha", String::as_str);
 
     let offset = options.offset().unwrap_or_default();
 
     let (categories, total) = tokio::try_join!(
-        Category::toplevel(&mut conn, sort, options.per_page, offset).boxed(),
+        Category::toplevel(&conn, sort, options.per_page, offset).boxed(),
         // Query for the total count of categories
-        Category::count_toplevel(&mut conn).boxed(),
+        Category::count_toplevel(&conn).boxed(),
     )?;
 
     let categories = categories.into_iter().map(Category::into).collect();
@@ -102,8 +102,8 @@ pub async fn find_category(
         .first(&mut conn)
         .await?;
     let (subcats, parents) = tokio::try_join!(
-        cat.subcategories(&mut conn),
-        cat.parent_categories(&mut conn).boxed(),
+        cat.subcategories(&conn),
+        cat.parent_categories(&conn).boxed(),
     )?;
 
     let subcats = subcats.into_iter().map(Category::into).collect();

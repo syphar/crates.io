@@ -71,7 +71,7 @@ impl BackgroundJob for ArchiveVersionDownloads {
 
         // Queue up the job to regenerate the archive index.
         IndexVersionDownloadsArchive
-            .enqueue(&mut conn)
+            .enqueue(&conn)
             .await
             .context("Failed to enqueue IndexVersionDownloadsArchive job")?;
 

@@ -60,7 +60,7 @@ impl BackgroundJob for InvalidateCdns {
             result.context("Failed to queue CloudFront invalidation paths")?;
 
             // Schedule the processing job to handle the queued paths
-            let result = ProcessCloudfrontInvalidationQueue.enqueue(&mut conn).await;
+            let result = ProcessCloudfrontInvalidationQueue.enqueue(&conn).await;
             result.context("Failed to enqueue CloudFront invalidation processing job")?;
         }
 

@@ -642,18 +642,18 @@ pub async fn publish(app: AppState, req: Parts, body: Body) -> AppResult<Json<Go
         let analyze_crate_file_job = AnalyzeCrateFile::new(version.id);
 
         tokio::try_join!(
-            git_index_job.enqueue(conn),
-            sparse_index_job.enqueue(conn),
-            publish_notifications_job.enqueue(conn),
-            crate_feed_job.enqueue(conn).or_else(async |error| {
+            git_index_job.enqueue(&*conn),
+            sparse_index_job.enqueue(&*conn),
+            publish_notifications_job.enqueue(&*conn),
+            crate_feed_job.enqueue(&*conn).or_else(async |error| {
                 error!("Failed to enqueue `rss::SyncCrateFeed` job: {error}");
                 Ok::<_, EnqueueError>(None)
             }),
-            updates_feed_job.enqueue(conn).or_else(async |error| {
+            updates_feed_job.enqueue(&*conn).or_else(async |error| {
                 error!("Failed to enqueue `rss::SyncUpdatesFeed` job: {error}");
                 Ok::<_, EnqueueError>(None)
             }),
-            analyze_crate_file_job.enqueue(conn).or_else(async |error| {
+            analyze_crate_file_job.enqueue(&*conn).or_else(async |error| {
                 error!("Failed to enqueue `AnalyzeCrateFile` job: {error}");
                 Ok::<_, EnqueueError>(None)
             }),
@@ -662,7 +662,7 @@ pub async fn publish(app: AppState, req: Parts, body: Body) -> AppResult<Json<Go
         // Enqueue OG image generation job if not handled by UpdateDefaultVersion
         if existing_default_version.is_none() {
             let og_image_job = GenerateOgImage::new(krate.name.clone());
-            if let Err(error) = og_image_job.enqueue(conn).await {
+            if let Err(error) = og_image_job.enqueue(&*conn).await {
                 error!("Failed to enqueue `GenerateOgImage` job: {error}");
             }
         };
@@ -673,11 +673,11 @@ pub async fn publish(app: AppState, req: Parts, body: Body) -> AppResult<Json<Go
             let typosquat_job = CheckTyposquat::new(&krate.name);
 
             tokio::try_join!(
-                crates_feed_job.enqueue(conn).or_else(async |error| {
+                crates_feed_job.enqueue(&*conn).or_else(async |error| {
                     error!("Failed to enqueue `rss::SyncCratesFeed` job: {error}");
                     Ok::<_, EnqueueError>(None)
                 }),
-                typosquat_job.enqueue(conn).or_else(async |error| {
+                typosquat_job.enqueue(&*conn).or_else(async |error| {
                     error!("Failed to enqueue `CheckTyposquat` job: {error}");
                     Ok::<_, EnqueueError>(None)
                 }),

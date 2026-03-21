@@ -57,7 +57,7 @@ impl BackgroundJob for DeleteCrateFromStorage {
 
         info!("{name}: Enqueuing CDN invalidations");
 
-        let mut conn = ctx.deadpool.get().await?;
+        let conn = ctx.deadpool.get().await?;
         InvalidateCdns::new(
             crate_file_paths
                 .into_iter()
@@ -65,7 +65,7 @@ impl BackgroundJob for DeleteCrateFromStorage {
                 .chain(std::iter::once(format!("og-images/{name}.png").into()))
                 .chain(std::iter::once(object_store::path::Path::from(&feed_id))),
         )
-        .enqueue(&mut conn)
+        .enqueue(&conn)
         .await?;
 
         info!("{name}: Successfully enqueued CDN invalidations.");

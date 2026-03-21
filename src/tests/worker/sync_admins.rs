@@ -49,7 +49,7 @@ async fn test_sync_admins_job() -> anyhow::Result<()> {
     ];
     assert_eq!(admins, expected_admins);
 
-    SyncAdmins.enqueue(&mut conn).await?;
+    SyncAdmins.enqueue(&conn).await?;
     app.run_pending_background_jobs().await;
 
     let admins = get_admins(&mut conn).await?;
@@ -60,7 +60,7 @@ async fn test_sync_admins_job() -> anyhow::Result<()> {
 
     // Run the job again to verify that no new emails are sent
     // for `new-admin-without-account`.
-    SyncAdmins.enqueue(&mut conn).await?;
+    SyncAdmins.enqueue(&conn).await?;
     app.run_pending_background_jobs().await;
 
     assert_eq!(app.emails().await.len(), 3);

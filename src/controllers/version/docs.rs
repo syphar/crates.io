@@ -45,7 +45,7 @@ pub async fn rebuild_version_docs(
     }
 
     let job = jobs::DocsRsQueueRebuild::new(path.name, path.version);
-    job.enqueue(&mut conn).await.map_err(|error| {
+    job.enqueue(&conn).await.map_err(|error| {
         error!("docs_rs_queue_rebuild: Failed to create background job: {error}");
         server_error("failed to create background job")
     })?;

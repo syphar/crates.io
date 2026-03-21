@@ -52,7 +52,7 @@ pub struct SummaryResponse {
     responses((status = 200, description = "Successful Response", body = inline(SummaryResponse))),
 )]
 pub async fn get_summary(state: AppState) -> AppResult<Json<SummaryResponse>> {
-    let mut conn = state.db_read().await?;
+    let conn = state.db_read().await?;
 
     let config = &state.config;
 
@@ -66,48 +66,48 @@ pub async fn get_summary(state: AppState) -> AppResult<Json<SummaryResponse>> {
         popular_categories,
         popular_keywords,
     ) = tokio::try_join!(
-        crates::table.count().get_result(&mut conn).boxed(),
+        crates::table.count().get_result(&mut &*conn).boxed(),
         metadata::table
             .select(metadata::total_downloads)
-            .get_result(&mut conn)
+            .get_result(&mut &*conn)
             .boxed(),
         Record::query()
             .order(crates::created_at.desc())
             .limit(10)
-            .load(&mut conn)
+            .load(&mut &*conn)
             .boxed(),
         Record::query()
             .filter(crates::updated_at.ne(crates::created_at))
             .order(crates::updated_at.desc())
             .limit(10)
-            .load(&mut conn)
+            .load(&mut &*conn)
             .boxed(),
         Record::query()
             .filter(crates::name.ne_all(&config.excluded_crate_names))
             .then_order_by(crate_downloads::downloads.desc())
             .limit(10)
-            .load(&mut conn)
+            .load(&mut &*conn)
             .boxed(),
         Record::query()
             .filter(crates::name.ne_all(&config.excluded_crate_names))
             .filter(recent_crate_downloads::downloads.is_not_null())
             .then_order_by(recent_crate_downloads::downloads.desc())
             .limit(10)
-            .load(&mut conn)
+            .load(&mut &*conn)
             .boxed(),
-        Category::toplevel(&mut conn, "crates", 10, 0),
+        Category::toplevel(&conn, "crates", 10, 0),
         Keyword::query()
             .order(keywords::crates_cnt.desc())
             .limit(10)
-            .load(&mut conn)
+            .load(&mut &*conn)
             .boxed(),
     )?;
 
     let (new_crates, most_downloaded, most_recently_downloaded, just_updated) = tokio::try_join!(
-        encode_crates(&mut conn, new_crates),
-        encode_crates(&mut conn, most_downloaded),
-        encode_crates(&mut conn, most_recently_downloaded),
-        encode_crates(&mut conn, just_updated),
+        encode_crates(&conn, new_crates),
+        encode_crates(&conn, most_downloaded),
+        encode_crates(&conn, most_recently_downloaded),
+        encode_crates(&conn, just_updated),
     )?;
 
     let popular_categories = popular_categories.into_iter().map(Category::into).collect();
@@ -149,9 +149,9 @@ struct Record {
 }
 
 fn encode_crates(
-    conn: &mut AsyncPgConnection,
+    mut conn: &AsyncPgConnection,
     data: Vec<Record>,
-) -> impl Future<Output = AppResult<Vec<EncodableCrate>>> + use<> {
+) -> impl Future<Output = AppResult<Vec<EncodableCrate>>> + use<'_> {
     let crate_ids = data
         .iter()
         .map(|record| record.krate.id)
@@ -160,7 +160,7 @@ fn encode_crates(
     let future = Version::query()
         .filter(versions::crate_id.eq_any(crate_ids))
         .filter(versions::yanked.eq(false))
-        .load(conn);
+        .load(&mut conn);
 
     async move {
         let versions: Vec<Version> = future.await?;

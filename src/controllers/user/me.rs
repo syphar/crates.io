@@ -39,14 +39,14 @@ pub async fn get_authenticated_user(app: AppState, req: Parts) -> AppResult<Json
                 emails::email.nullable(),
                 emails::token_generated_at.nullable().is_not_null(),
             ))
-            .first::<(User, Option<bool>, Option<String>, bool)>(&mut conn)
+            .first::<(User, Option<bool>, Option<String>, bool)>(&mut &*conn)
             .boxed(),
         CrateOwner::by_owner_kind(OwnerKind::User)
             .inner_join(crates::table)
             .filter(crate_owners::owner_id.eq(user_id))
             .select((crates::id, crates::name, crate_owners::email_notifications))
             .order(crates::name.asc())
-            .load(&mut conn)
+            .load(&mut &*conn)
             .boxed()
     )?;
 

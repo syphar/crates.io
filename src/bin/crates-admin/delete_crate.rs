@@ -111,9 +111,9 @@ pub async fn run(opts: Opts) -> anyhow::Result<()> {
         let delete_from_storage_job = jobs::DeleteCrateFromStorage::new(name.into());
 
         if let Err(error) = tokio::try_join!(
-            git_index_job.enqueue(&mut conn),
-            sparse_index_job.enqueue(&mut conn),
-            delete_from_storage_job.enqueue(&mut conn),
+            git_index_job.enqueue(&conn),
+            sparse_index_job.enqueue(&conn),
+            delete_from_storage_job.enqueue(&conn),
         ) {
             warn!("{name}: Failed to enqueue background job: {error}");
         }

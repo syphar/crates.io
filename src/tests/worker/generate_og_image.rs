@@ -37,7 +37,7 @@ async fn test_generate_og_image_job() {
 
     // Create and enqueue the job
     let job = crates_io::worker::jobs::GenerateOgImage::new("test-crate".to_string());
-    job.enqueue(&mut conn).await.unwrap();
+    job.enqueue(&conn).await.unwrap();
 
     // Run the background job
     app.run_pending_background_jobs().await;
@@ -70,11 +70,11 @@ async fn test_generate_og_image_job() {
 #[tokio::test(flavor = "multi_thread")]
 async fn test_generate_og_image_job_nonexistent_crate() {
     let (app, _, _) = TestApp::full().with_user().await;
-    let mut conn = app.db_conn().await;
+    let conn = app.db_conn().await;
 
     // Create and enqueue the job for a non-existent crate
     let job = crates_io::worker::jobs::GenerateOgImage::new("nonexistent-crate".to_string());
-    job.enqueue(&mut conn).await.unwrap();
+    job.enqueue(&conn).await.unwrap();
 
     // Run the background job - should complete without error
     app.run_pending_background_jobs().await;

@@ -57,7 +57,7 @@ impl VersionOwnerAction {
     }
 
     pub fn by_version<'a>(
-        conn: &mut AsyncPgConnection,
+        mut conn: &'a AsyncPgConnection,
         version: &'a Version,
     ) -> BoxFuture<'a, QueryResult<Vec<(Self, User)>>> {
         use version_owner_actions::dsl::version_id;
@@ -67,7 +67,7 @@ impl VersionOwnerAction {
             .inner_join(users::table)
             .select((VersionOwnerAction::as_select(), User::as_select()))
             .order(version_owner_actions::dsl::id)
-            .load(conn)
+            .load(&mut conn)
             .boxed()
     }
 

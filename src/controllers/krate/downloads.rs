@@ -115,7 +115,7 @@ pub async fn get_crate_downloads(
                 version_downloads::date.asc(),
                 version_downloads::version_id.desc(),
             ))
-            .load(&mut conn)
+            .load(&mut &*conn)
             .boxed(),
         VersionDownload::belonging_to(rest)
             .select((
@@ -125,10 +125,10 @@ pub async fn get_crate_downloads(
             .filter(version_downloads::date.gt(date(now - 90.days())))
             .group_by(version_downloads::date)
             .order(version_downloads::date.asc())
-            .load::<ExtraDownload>(&mut conn)
+            .load::<ExtraDownload>(&mut &*conn)
             .boxed(),
-        load_versions_and_publishers(&mut conn, latest_five, include.versions),
-        load_actions(&mut conn, latest_five, include.versions),
+        load_versions_and_publishers(&conn, latest_five, include.versions),
+        load_actions(&conn, latest_five, include.versions),
     )?;
 
     let version_downloads = downloads
@@ -163,7 +163,7 @@ pub async fn get_crate_downloads(
 
 type VersionsAndPublishers = (FullVersion, Option<User>);
 fn load_versions_and_publishers<'a>(
-    conn: &mut AsyncPgConnection,
+    mut conn: &'a AsyncPgConnection,
     versions: &'a [Version],
     includes: bool,
 ) -> BoxFuture<'a, QueryResult<Vec<VersionsAndPublishers>>> {
@@ -173,12 +173,12 @@ fn load_versions_and_publishers<'a>(
     FullVersion::belonging_to(versions)
         .left_outer_join(users::table)
         .select(VersionsAndPublishers::as_select())
-        .load(conn)
+        .load(&mut conn)
         .boxed()
 }
 
 fn load_actions<'a>(
-    conn: &mut AsyncPgConnection,
+    mut conn: &'a AsyncPgConnection,
     versions: &'a [Version],
     includes: bool,
 ) -> BoxFuture<'a, QueryResult<Vec<(VersionOwnerAction, User)>>> {
@@ -189,7 +189,7 @@ fn load_actions<'a>(
         .inner_join(users::table)
         .select((VersionOwnerAction::as_select(), User::as_select()))
         .order(version_owner_actions::id)
-        .load(conn)
+        .load(&mut conn)
         .boxed()
 }
 

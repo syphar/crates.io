@@ -115,7 +115,7 @@ impl BackgroundJob for GenerateOgImage {
                 CloudFrontInvalidationQueueItem::queue_paths(&mut conn, distribution, paths).await;
             if let Err(error) = result {
                 warn!("Failed to queue CloudFront invalidation for {crate_name}: {error}");
-            } else if let Err(error) = ProcessCloudfrontInvalidationQueue.enqueue(&mut conn).await {
+            } else if let Err(error) = ProcessCloudfrontInvalidationQueue.enqueue(&conn).await {
                 warn!(
                     "Failed to enqueue CloudFront invalidation processing job for {crate_name}: {error}"
                 );

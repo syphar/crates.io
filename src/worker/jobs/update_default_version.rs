@@ -58,7 +58,7 @@ impl BackgroundJob for UpdateDefaultVersion {
         if let Some(crate_name) = crate_name {
             // Generate OG image after updating default version
             info!("Enqueueing OG image generation for crate {crate_name}");
-            GenerateOgImage::new(crate_name).enqueue(&mut conn).await?;
+            GenerateOgImage::new(crate_name).enqueue(&conn).await?;
         } else {
             warn!("No crate found for ID {crate_id}, skipping OG image generation");
             return Ok(());
