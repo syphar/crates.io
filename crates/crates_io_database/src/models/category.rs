@@ -6,8 +6,6 @@ use diesel::prelude::*;
 use diesel::sql_types::Text;
 use diesel_async::scoped_futures::ScopedFutureExt;
 use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
-use futures_util::FutureExt;
-use futures_util::future::BoxFuture;
 
 #[derive(Clone, Identifiable, HasQuery, QueryableByName, Debug)]
 #[diesel(table_name = categories)]
@@ -97,12 +95,12 @@ impl Category {
             .await
     }
 
-    pub fn toplevel<'a>(
-        mut conn: &'a AsyncPgConnection,
-        sort: &'a str,
+    pub async fn toplevel(
+        mut conn: &AsyncPgConnection,
+        sort: &str,
         limit: i64,
         offset: i64,
-    ) -> BoxFuture<'a, QueryResult<Vec<Category>>> {
+    ) -> QueryResult<Vec<Category>> {
         use diesel::sql_types::Int8;
 
         let sort_sql = match sort {
@@ -116,19 +114,16 @@ impl Category {
             .bind::<Int8, _>(limit)
             .bind::<Int8, _>(offset)
             .load(&mut conn)
-            .boxed()
+            .await
     }
 
-    pub fn subcategories<'a>(
-        &'a self,
-        mut conn: &'a AsyncPgConnection,
-    ) -> BoxFuture<'a, QueryResult<Vec<Category>>> {
+    pub async fn subcategories(&self, mut conn: &AsyncPgConnection) -> QueryResult<Vec<Category>> {
         use diesel::sql_types::Text;
 
         diesel::sql_query(include_str!("subcategories.sql"))
             .bind::<Text, _>(&self.category)
             .load(&mut conn)
-            .boxed()
+            .await
     }
 
     /// Gathers the parent categories from the top-level Category to the direct parent of this Category.

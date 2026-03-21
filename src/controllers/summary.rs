@@ -10,7 +10,6 @@ use diesel::prelude::*;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use futures_util::FutureExt;
 use serde::Serialize;
-use std::future::Future;
 
 #[derive(Debug, Serialize, utoipa::ToSchema)]
 pub struct SummaryResponse {
@@ -148,41 +147,38 @@ struct Record {
     num_versions: Option<i32>,
 }
 
-fn encode_crates(
+async fn encode_crates(
     mut conn: &AsyncPgConnection,
     data: Vec<Record>,
-) -> impl Future<Output = AppResult<Vec<EncodableCrate>>> + use<'_> {
+) -> AppResult<Vec<EncodableCrate>> {
     let crate_ids = data
         .iter()
         .map(|record| record.krate.id)
         .collect::<Vec<_>>();
 
-    let future = Version::query()
+    let versions: Vec<Version> = Version::query()
         .filter(versions::crate_id.eq_any(crate_ids))
         .filter(versions::yanked.eq(false))
-        .load(&mut conn);
+        .load(&mut conn)
+        .await?;
 
-    async move {
-        let versions: Vec<Version> = future.await?;
-
-        let krates = data.iter().map(|record| &record.krate).collect::<Vec<_>>();
-        versions
-            .grouped_by(&krates)
-            .into_iter()
-            .map(TopVersions::from_versions)
-            .zip(data)
-            .map(|(top_versions, record)| {
-                Ok(EncodableCrate::from_minimal(
-                    record.krate,
-                    record.default_version.as_deref(),
-                    record.num_versions.unwrap_or_default(),
-                    record.yanked,
-                    Some(&top_versions),
-                    false,
-                    record.total_downloads,
-                    record.recent_downloads,
-                ))
-            })
-            .collect()
-    }
+    let krates = data.iter().map(|record| &record.krate).collect::<Vec<_>>();
+    versions
+        .grouped_by(&krates)
+        .into_iter()
+        .map(TopVersions::from_versions)
+        .zip(data)
+        .map(|(top_versions, record)| {
+            Ok(EncodableCrate::from_minimal(
+                record.krate,
+                record.default_version.as_deref(),
+                record.num_versions.unwrap_or_default(),
+                record.yanked,
+                Some(&top_versions),
+                false,
+                record.total_downloads,
+                record.recent_downloads,
+            ))
+        })
+        .collect()
 }

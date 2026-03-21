@@ -18,7 +18,6 @@ use crates_io_diesel_helpers::to_char;
 use diesel::prelude::*;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use futures_util::FutureExt;
-use futures_util::future::BoxFuture;
 use serde::{Deserialize, Serialize};
 use std::cmp;
 use std::str::FromStr;
@@ -162,35 +161,36 @@ pub async fn get_crate_downloads(
 }
 
 type VersionsAndPublishers = (FullVersion, Option<User>);
-fn load_versions_and_publishers<'a>(
-    mut conn: &'a AsyncPgConnection,
-    versions: &'a [Version],
+
+async fn load_versions_and_publishers(
+    mut conn: &AsyncPgConnection,
+    versions: &[Version],
     includes: bool,
-) -> BoxFuture<'a, QueryResult<Vec<VersionsAndPublishers>>> {
+) -> QueryResult<Vec<VersionsAndPublishers>> {
     if !includes {
-        return futures_util::future::always_ready(|| Ok(vec![])).boxed();
+        return Ok(vec![]);
     }
     FullVersion::belonging_to(versions)
         .left_outer_join(users::table)
         .select(VersionsAndPublishers::as_select())
         .load(&mut conn)
-        .boxed()
+        .await
 }
 
-fn load_actions<'a>(
-    mut conn: &'a AsyncPgConnection,
-    versions: &'a [Version],
+async fn load_actions(
+    mut conn: &AsyncPgConnection,
+    versions: &[Version],
     includes: bool,
-) -> BoxFuture<'a, QueryResult<Vec<(VersionOwnerAction, User)>>> {
+) -> QueryResult<Vec<(VersionOwnerAction, User)>> {
     if !includes {
-        return futures_util::future::always_ready(|| Ok(vec![])).boxed();
+        return Ok(vec![]);
     }
     VersionOwnerAction::belonging_to(versions)
         .inner_join(users::table)
         .select((VersionOwnerAction::as_select(), User::as_select()))
         .order(version_owner_actions::id)
         .load(&mut conn)
-        .boxed()
+        .await
 }
 
 #[derive(Debug, Default)]

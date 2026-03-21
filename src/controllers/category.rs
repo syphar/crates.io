@@ -8,7 +8,6 @@ use axum::Json;
 use axum::extract::{FromRequestParts, Path, Query};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
-use futures_util::FutureExt;
 use http::request::Parts;
 use serde::{Deserialize, Serialize};
 
@@ -65,9 +64,8 @@ pub async fn list_categories(
     let offset = options.offset().unwrap_or_default();
 
     let (categories, total) = tokio::try_join!(
-        Category::toplevel(&conn, sort, options.per_page, offset).boxed(),
-        // Query for the total count of categories
-        Category::count_toplevel(&conn).boxed(),
+        Category::toplevel(&conn, sort, options.per_page, offset),
+        Category::count_toplevel(&conn),
     )?;
 
     let categories = categories.into_iter().map(Category::into).collect();
@@ -101,10 +99,8 @@ pub async fn find_category(
         .select(Category::as_select())
         .first(&mut conn)
         .await?;
-    let (subcats, parents) = tokio::try_join!(
-        cat.subcategories(&conn),
-        cat.parent_categories(&conn).boxed(),
-    )?;
+    let (subcats, parents) =
+        tokio::try_join!(cat.subcategories(&conn), cat.parent_categories(&conn),)?;
 
     let subcats = subcats.into_iter().map(Category::into).collect();
     let parents = parents.into_iter().map(Category::into).collect();
