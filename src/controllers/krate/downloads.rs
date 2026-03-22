@@ -18,7 +18,6 @@ use crates_io_diesel_helpers::to_char;
 use diesel::prelude::*;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use futures_util::FutureExt;
-use futures_util::future::BoxFuture;
 use serde::{Deserialize, Serialize};
 use std::cmp;
 use std::str::FromStr;
@@ -115,7 +114,7 @@ pub async fn get_crate_downloads(
                 version_downloads::date.asc(),
                 version_downloads::version_id.desc(),
             ))
-            .load(&mut conn)
+            .load(&mut &*conn)
             .boxed(),
         VersionDownload::belonging_to(rest)
             .select((
@@ -125,10 +124,10 @@ pub async fn get_crate_downloads(
             .filter(version_downloads::date.gt(date(now - 90.days())))
             .group_by(version_downloads::date)
             .order(version_downloads::date.asc())
-            .load::<ExtraDownload>(&mut conn)
+            .load::<ExtraDownload>(&mut &*conn)
             .boxed(),
-        load_versions_and_publishers(&mut conn, latest_five, include.versions),
-        load_actions(&mut conn, latest_five, include.versions),
+        load_versions_and_publishers(&conn, latest_five, include.versions),
+        load_actions(&conn, latest_five, include.versions),
     )?;
 
     let version_downloads = downloads
@@ -162,35 +161,36 @@ pub async fn get_crate_downloads(
 }
 
 type VersionsAndPublishers = (FullVersion, Option<User>);
-fn load_versions_and_publishers<'a>(
-    conn: &mut AsyncPgConnection,
-    versions: &'a [Version],
+
+async fn load_versions_and_publishers(
+    mut conn: &AsyncPgConnection,
+    versions: &[Version],
     includes: bool,
-) -> BoxFuture<'a, QueryResult<Vec<VersionsAndPublishers>>> {
+) -> QueryResult<Vec<VersionsAndPublishers>> {
     if !includes {
-        return futures_util::future::always_ready(|| Ok(vec![])).boxed();
+        return Ok(vec![]);
     }
     FullVersion::belonging_to(versions)
         .left_outer_join(users::table)
         .select(VersionsAndPublishers::as_select())
-        .load(conn)
-        .boxed()
+        .load(&mut conn)
+        .await
 }
 
-fn load_actions<'a>(
-    conn: &mut AsyncPgConnection,
-    versions: &'a [Version],
+async fn load_actions(
+    mut conn: &AsyncPgConnection,
+    versions: &[Version],
     includes: bool,
-) -> BoxFuture<'a, QueryResult<Vec<(VersionOwnerAction, User)>>> {
+) -> QueryResult<Vec<(VersionOwnerAction, User)>> {
     if !includes {
-        return futures_util::future::always_ready(|| Ok(vec![])).boxed();
+        return Ok(vec![]);
     }
     VersionOwnerAction::belonging_to(versions)
         .inner_join(users::table)
         .select((VersionOwnerAction::as_select(), User::as_select()))
         .order(version_owner_actions::id)
-        .load(conn)
-        .boxed()
+        .load(&mut conn)
+        .await
 }
 
 #[derive(Debug, Default)]

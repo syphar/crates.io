@@ -22,7 +22,7 @@ async fn test_sync_updates_feed() -> anyhow::Result<()> {
     create_version(&mut conn, "foo", "1.1.0", None, "2024-06-22T08:30:01Z").await?;
     create_version(&mut conn, "foo", "1.2.0", None, "2024-06-22T15:57:19Z").await?;
 
-    jobs::rss::SyncUpdatesFeed.enqueue(&mut conn).await?;
+    jobs::rss::SyncUpdatesFeed.enqueue(&conn).await?;
 
     app.run_pending_background_jobs().await;
 

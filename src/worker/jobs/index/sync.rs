@@ -240,7 +240,7 @@ impl BackgroundJob for SyncToSparseIndex {
             let result = CloudFrontInvalidationQueueItem::queue_paths(&mut conn, dist, paths).await;
             result.context("Failed to queue CloudFront invalidation path")?;
 
-            let result = ProcessCloudfrontInvalidationQueue.enqueue(&mut conn).await;
+            let result = ProcessCloudfrontInvalidationQueue.enqueue(&conn).await;
             result.context("Failed to enqueue CloudFront invalidation processing job")?;
         }
         Ok(())

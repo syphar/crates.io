@@ -137,9 +137,9 @@ pub async fn delete_crate(
             let delete_from_storage_job = jobs::DeleteCrateFromStorage::new(path.name);
 
             tokio::try_join!(
-                git_index_job.enqueue(conn),
-                sparse_index_job.enqueue(conn),
-                delete_from_storage_job.enqueue(conn),
+                git_index_job.enqueue(&*conn),
+                sparse_index_job.enqueue(&*conn),
+                delete_from_storage_job.enqueue(&*conn),
             )?;
 
             Ok::<_, BoxedAppError>(())

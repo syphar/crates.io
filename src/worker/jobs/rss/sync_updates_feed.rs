@@ -191,10 +191,10 @@ mod tests {
 
         // If there are less than NUM_ITEMS versions, they should all be returned
         let futures = [
-            create_version(&mut conn, foo, "1.0.0", now - Duration::days(123)),
-            create_version(&mut conn, foo, "1.0.1", now - Duration::days(110)),
-            create_version(&mut conn, foo, "1.1.0", now - Duration::days(100)),
-            create_version(&mut conn, foo, "1.2.0", now - Duration::days(90)),
+            create_version(&conn, foo, "1.0.0", now - Duration::days(123)),
+            create_version(&conn, foo, "1.0.1", now - Duration::days(110)),
+            create_version(&conn, foo, "1.1.0", now - Duration::days(100)),
+            create_version(&conn, foo, "1.2.0", now - Duration::days(90)),
         ];
         join_all(futures).await;
 
@@ -207,7 +207,7 @@ mod tests {
         for i in 1..=NUM_ITEMS {
             let version = format!("1.2.{i}");
             let publish_time = now - Duration::days(90) + Duration::hours(i);
-            futures.push(create_version(&mut conn, foo, version, publish_time));
+            futures.push(create_version(&conn, foo, version, publish_time));
         }
         join_all(futures).await;
 
@@ -220,7 +220,7 @@ mod tests {
         for i in 1..=(NUM_ITEMS + 10) {
             let version = format!("1.3.{i}");
             let publish_time = now - Duration::minutes(30) + Duration::seconds(i);
-            futures.push(create_version(&mut conn, foo, version, publish_time));
+            futures.push(create_version(&conn, foo, version, publish_time));
         }
         join_all(futures).await;
 
@@ -239,11 +239,11 @@ mod tests {
     }
 
     fn create_version<T: Into<Cow<'static, str>>>(
-        conn: &mut AsyncPgConnection,
+        mut conn: &AsyncPgConnection,
         crate_id: i32,
         version: T,
         publish_time: DateTime<Utc>,
-    ) -> impl Future<Output = i32> + use<T> {
+    ) -> impl Future<Output = i32> + use<'_, T> {
         let version = version.into();
         let future = diesel::insert_into(versions::table)
             .values((
@@ -256,7 +256,7 @@ mod tests {
                 versions::crate_size.eq(0),
             ))
             .returning(versions::id)
-            .get_result(conn);
+            .get_result(&mut conn);
 
         async move { future.await.unwrap() }
     }

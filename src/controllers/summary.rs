@@ -10,7 +10,6 @@ use diesel::prelude::*;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use futures_util::FutureExt;
 use serde::Serialize;
-use std::future::Future;
 
 #[derive(Debug, Serialize, utoipa::ToSchema)]
 pub struct SummaryResponse {
@@ -52,7 +51,7 @@ pub struct SummaryResponse {
     responses((status = 200, description = "Successful Response", body = inline(SummaryResponse))),
 )]
 pub async fn get_summary(state: AppState) -> AppResult<Json<SummaryResponse>> {
-    let mut conn = state.db_read().await?;
+    let conn = state.db_read().await?;
 
     let config = &state.config;
 
@@ -66,48 +65,48 @@ pub async fn get_summary(state: AppState) -> AppResult<Json<SummaryResponse>> {
         popular_categories,
         popular_keywords,
     ) = tokio::try_join!(
-        crates::table.count().get_result(&mut conn).boxed(),
+        crates::table.count().get_result(&mut &*conn).boxed(),
         metadata::table
             .select(metadata::total_downloads)
-            .get_result(&mut conn)
+            .get_result(&mut &*conn)
             .boxed(),
         Record::query()
             .order(crates::created_at.desc())
             .limit(10)
-            .load(&mut conn)
+            .load(&mut &*conn)
             .boxed(),
         Record::query()
             .filter(crates::updated_at.ne(crates::created_at))
             .order(crates::updated_at.desc())
             .limit(10)
-            .load(&mut conn)
+            .load(&mut &*conn)
             .boxed(),
         Record::query()
             .filter(crates::name.ne_all(&config.excluded_crate_names))
             .then_order_by(crate_downloads::downloads.desc())
             .limit(10)
-            .load(&mut conn)
+            .load(&mut &*conn)
             .boxed(),
         Record::query()
             .filter(crates::name.ne_all(&config.excluded_crate_names))
             .filter(recent_crate_downloads::downloads.is_not_null())
             .then_order_by(recent_crate_downloads::downloads.desc())
             .limit(10)
-            .load(&mut conn)
+            .load(&mut &*conn)
             .boxed(),
-        Category::toplevel(&mut conn, "crates", 10, 0),
+        Category::toplevel(&conn, "crates", 10, 0),
         Keyword::query()
             .order(keywords::crates_cnt.desc())
             .limit(10)
-            .load(&mut conn)
+            .load(&mut &*conn)
             .boxed(),
     )?;
 
     let (new_crates, most_downloaded, most_recently_downloaded, just_updated) = tokio::try_join!(
-        encode_crates(&mut conn, new_crates),
-        encode_crates(&mut conn, most_downloaded),
-        encode_crates(&mut conn, most_recently_downloaded),
-        encode_crates(&mut conn, just_updated),
+        encode_crates(&conn, new_crates),
+        encode_crates(&conn, most_downloaded),
+        encode_crates(&conn, most_recently_downloaded),
+        encode_crates(&conn, just_updated),
     )?;
 
     let popular_categories = popular_categories.into_iter().map(Category::into).collect();
@@ -148,41 +147,38 @@ struct Record {
     num_versions: Option<i32>,
 }
 
-fn encode_crates(
-    conn: &mut AsyncPgConnection,
+async fn encode_crates(
+    mut conn: &AsyncPgConnection,
     data: Vec<Record>,
-) -> impl Future<Output = AppResult<Vec<EncodableCrate>>> + use<> {
+) -> AppResult<Vec<EncodableCrate>> {
     let crate_ids = data
         .iter()
         .map(|record| record.krate.id)
         .collect::<Vec<_>>();
 
-    let future = Version::query()
+    let versions: Vec<Version> = Version::query()
         .filter(versions::crate_id.eq_any(crate_ids))
         .filter(versions::yanked.eq(false))
-        .load(conn);
+        .load(&mut conn)
+        .await?;
 
-    async move {
-        let versions: Vec<Version> = future.await?;
-
-        let krates = data.iter().map(|record| &record.krate).collect::<Vec<_>>();
-        versions
-            .grouped_by(&krates)
-            .into_iter()
-            .map(TopVersions::from_versions)
-            .zip(data)
-            .map(|(top_versions, record)| {
-                Ok(EncodableCrate::from_minimal(
-                    record.krate,
-                    record.default_version.as_deref(),
-                    record.num_versions.unwrap_or_default(),
-                    record.yanked,
-                    Some(&top_versions),
-                    false,
-                    record.total_downloads,
-                    record.recent_downloads,
-                ))
-            })
-            .collect()
-    }
+    let krates = data.iter().map(|record| &record.krate).collect::<Vec<_>>();
+    versions
+        .grouped_by(&krates)
+        .into_iter()
+        .map(TopVersions::from_versions)
+        .zip(data)
+        .map(|(top_versions, record)| {
+            Ok(EncodableCrate::from_minimal(
+                record.krate,
+                record.default_version.as_deref(),
+                record.num_versions.unwrap_or_default(),
+                record.yanked,
+                Some(&top_versions),
+                false,
+                record.total_downloads,
+                record.recent_downloads,
+            ))
+        })
+        .collect()
 }

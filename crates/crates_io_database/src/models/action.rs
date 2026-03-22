@@ -5,8 +5,6 @@ use chrono::{DateTime, Utc};
 use crates_io_diesel_helpers::pg_enum;
 use diesel::prelude::*;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
-use futures_util::future::BoxFuture;
-use futures_util::future::FutureExt;
 
 pg_enum! {
     pub enum VersionAction {
@@ -56,10 +54,10 @@ impl VersionOwnerAction {
         Self::query().load(conn).await
     }
 
-    pub fn by_version<'a>(
-        conn: &mut AsyncPgConnection,
-        version: &'a Version,
-    ) -> BoxFuture<'a, QueryResult<Vec<(Self, User)>>> {
+    pub async fn by_version(
+        mut conn: &AsyncPgConnection,
+        version: &Version,
+    ) -> QueryResult<Vec<(Self, User)>> {
         use version_owner_actions::dsl::version_id;
 
         version_owner_actions::table
@@ -67,8 +65,8 @@ impl VersionOwnerAction {
             .inner_join(users::table)
             .select((VersionOwnerAction::as_select(), User::as_select()))
             .order(version_owner_actions::dsl::id)
-            .load(conn)
-            .boxed()
+            .load(&mut conn)
+            .await
     }
 
     pub async fn for_versions(

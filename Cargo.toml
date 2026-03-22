@@ -96,11 +96,11 @@ csv = "=1.4.0"
 chrono = { version = "=0.4.44", default-features = false, features = ["serde"] }
 clap = { version = "=4.6.0", features = ["derive", "env", "unicode", "wrap_help"] }
 cookie = { version = "=0.18.1", features = ["secure"] }
-deadpool-diesel = { version = "=0.6.1", features = ["postgres", "tracing"] }
+deadpool-runtime = { version = "=0.3.1", features = ["tokio_1"] }
 derive_more = { version = "=2.1.1", features = ["deref", "deref_mut", "display"] }
 dialoguer = "=0.12.0"
 diesel = { version = "=2.3.7", features = ["postgres", "serde_json", "chrono", "numeric"] }
-diesel-async = { version = "=0.7.4", features = ["async-connection-wrapper", "deadpool", "postgres"] }
+diesel-async = { version = "=0.8.0", features = ["async-connection-wrapper", "deadpool", "postgres"] }
 diesel_full_text_search = "=2.3.0"
 diesel_migrations = { version = "=2.3.1", features = ["postgres"] }
 dotenvy = "=0.15.7"

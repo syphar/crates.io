@@ -29,7 +29,7 @@ async fn test_expiry() -> anyhow::Result<()> {
     };
     token.insert(&mut conn).await?;
 
-    DeleteExpiredTokens.enqueue(&mut conn).await?;
+    DeleteExpiredTokens.enqueue(&conn).await?;
     app.run_pending_background_jobs().await;
 
     // Check that the expired token was deleted

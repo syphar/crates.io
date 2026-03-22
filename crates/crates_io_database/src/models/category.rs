@@ -6,8 +6,6 @@ use diesel::prelude::*;
 use diesel::sql_types::Text;
 use diesel_async::scoped_futures::ScopedFutureExt;
 use diesel_async::{AsyncConnection, AsyncPgConnection, RunQueryDsl};
-use futures_util::FutureExt;
-use futures_util::future::BoxFuture;
 
 #[derive(Clone, Identifiable, HasQuery, QueryableByName, Debug)]
 #[diesel(table_name = categories)]
@@ -89,20 +87,20 @@ impl Category {
         .await
     }
 
-    pub async fn count_toplevel(conn: &mut AsyncPgConnection) -> QueryResult<i64> {
+    pub async fn count_toplevel(mut conn: &AsyncPgConnection) -> QueryResult<i64> {
         categories::table
             .filter(categories::category.not_like("%::%"))
             .count()
-            .get_result(conn)
+            .get_result(&mut conn)
             .await
     }
 
-    pub fn toplevel<'a>(
-        conn: &mut AsyncPgConnection,
-        sort: &'a str,
+    pub async fn toplevel(
+        mut conn: &AsyncPgConnection,
+        sort: &str,
         limit: i64,
         offset: i64,
-    ) -> BoxFuture<'a, QueryResult<Vec<Category>>> {
+    ) -> QueryResult<Vec<Category>> {
         use diesel::sql_types::Int8;
 
         let sort_sql = match sort {
@@ -115,20 +113,17 @@ impl Category {
         diesel::sql_query(format!(include_str!("toplevel.sql"), sort_sql))
             .bind::<Int8, _>(limit)
             .bind::<Int8, _>(offset)
-            .load(conn)
-            .boxed()
+            .load(&mut conn)
+            .await
     }
 
-    pub fn subcategories(
-        &self,
-        conn: &mut AsyncPgConnection,
-    ) -> BoxFuture<'_, QueryResult<Vec<Category>>> {
+    pub async fn subcategories(&self, mut conn: &AsyncPgConnection) -> QueryResult<Vec<Category>> {
         use diesel::sql_types::Text;
 
         diesel::sql_query(include_str!("subcategories.sql"))
             .bind::<Text, _>(&self.category)
-            .load(conn)
-            .boxed()
+            .load(&mut conn)
+            .await
     }
 
     /// Gathers the parent categories from the top-level Category to the direct parent of this Category.
@@ -137,13 +132,13 @@ impl Category {
     /// offer the frontend, for examples, slugs to create links to each parent category in turn.
     pub async fn parent_categories(
         &self,
-        conn: &mut AsyncPgConnection,
+        mut conn: &AsyncPgConnection,
     ) -> QueryResult<Vec<Category>> {
         use diesel::sql_types::Text;
 
         diesel::sql_query(include_str!("parent_categories.sql"))
             .bind::<Text, _>(&self.slug)
-            .load(conn)
+            .load(&mut conn)
             .await
     }
 }
@@ -190,7 +185,7 @@ mod tests {
             .await
             .unwrap();
 
-        let cats = Category::toplevel(&mut conn, "", 10, 0)
+        let cats = Category::toplevel(&conn, "", 10, 0)
             .await
             .unwrap()
             .into_iter()
@@ -225,7 +220,7 @@ mod tests {
             .await
             .unwrap();
 
-        let cats = Category::toplevel(&mut conn, "crates", 10, 0)
+        let cats = Category::toplevel(&conn, "crates", 10, 0)
             .await
             .unwrap()
             .into_iter()
@@ -261,7 +256,7 @@ mod tests {
             .await
             .unwrap();
 
-        let cats = Category::toplevel(&mut conn, "", 1, 0)
+        let cats = Category::toplevel(&conn, "", 1, 0)
             .await
             .unwrap()
             .into_iter()
@@ -270,7 +265,7 @@ mod tests {
         let expected = vec!["Cat 1".to_string()];
         assert_eq!(expected, cats);
 
-        let cats = Category::toplevel(&mut conn, "", 1, 1)
+        let cats = Category::toplevel(&conn, "", 1, 1)
             .await
             .unwrap()
             .into_iter()
@@ -308,7 +303,7 @@ mod tests {
             .await
             .unwrap();
 
-        let cats = Category::toplevel(&mut conn, "crates", 10, 0)
+        let cats = Category::toplevel(&conn, "crates", 10, 0)
             .await
             .unwrap()
             .into_iter()
@@ -350,7 +345,7 @@ mod tests {
             .await
             .unwrap();
 
-        let cats = Category::toplevel(&mut conn, "crates", 2, 0)
+        let cats = Category::toplevel(&conn, "crates", 2, 0)
             .await
             .unwrap()
             .into_iter()
@@ -359,7 +354,7 @@ mod tests {
         let expected = vec![("Cat 2".to_string(), 12), ("Cat 3".to_string(), 6)];
         assert_eq!(expected, cats);
 
-        let cats = Category::toplevel(&mut conn, "crates", 2, 1)
+        let cats = Category::toplevel(&conn, "crates", 2, 1)
             .await
             .unwrap()
             .into_iter()
@@ -405,8 +400,8 @@ mod tests {
             .await
             .unwrap();
 
-        let subcats = cat.subcategories(&mut conn).await.unwrap();
-        let parents = cat.parent_categories(&mut conn).await.unwrap();
+        let subcats = cat.subcategories(&conn).await.unwrap();
+        let parents = cat.parent_categories(&conn).await.unwrap();
 
         assert_eq!(parents.len(), 1);
         assert_eq!(parents[0].slug, "cat1");

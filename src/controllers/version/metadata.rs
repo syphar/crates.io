@@ -30,8 +30,8 @@ pub async fn find_version(state: AppState, path: CrateVersionPath) -> AppResult<
     let mut conn = state.db_read().await?;
     let (version, krate) = path.load_version_and_crate(&mut conn).await?;
     let (actions, published_by) = tokio::try_join!(
-        VersionOwnerAction::by_version(&mut conn, &version),
-        version.published_by(&mut conn),
+        VersionOwnerAction::by_version(&conn, &version),
+        version.published_by(&conn),
     )?;
 
     let version = EncodableVersion::from(version, &krate.name, published_by, actions);

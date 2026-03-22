@@ -25,7 +25,7 @@ async fn test_expiry() -> anyhow::Result<()> {
     };
     jti.insert(&mut conn).await?;
 
-    DeleteExpiredJtis.enqueue(&mut conn).await?;
+    DeleteExpiredJtis.enqueue(&conn).await?;
     app.run_pending_background_jobs().await;
 
     // Check that the expired token was deleted

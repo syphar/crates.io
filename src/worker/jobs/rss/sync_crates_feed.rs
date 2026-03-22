@@ -176,10 +176,10 @@ mod tests {
 
         // If there are less than NUM_ITEMS crates, they should all be returned
         let futures = [
-            create_crate(&mut conn, "foo", now - Duration::days(123)),
-            create_crate(&mut conn, "bar", now - Duration::days(110)),
-            create_crate(&mut conn, "baz", now - Duration::days(100)),
-            create_crate(&mut conn, "qux", now - Duration::days(90)),
+            create_crate(&conn, "foo", now - Duration::days(123)),
+            create_crate(&conn, "bar", now - Duration::days(110)),
+            create_crate(&conn, "baz", now - Duration::days(100)),
+            create_crate(&conn, "qux", now - Duration::days(90)),
         ];
         join_all(futures).await;
 
@@ -192,7 +192,7 @@ mod tests {
         for i in 1..=NUM_ITEMS {
             let name = format!("crate-{i}");
             let publish_time = now - Duration::days(90) + Duration::hours(i);
-            futures.push(create_crate(&mut conn, name, publish_time));
+            futures.push(create_crate(&conn, name, publish_time));
         }
         join_all(futures).await;
 
@@ -205,7 +205,7 @@ mod tests {
         for i in 1..=(NUM_ITEMS + 10) {
             let name = format!("other-crate-{i}");
             let publish_time = now - Duration::minutes(30) + Duration::seconds(i);
-            futures.push(create_crate(&mut conn, name, publish_time));
+            futures.push(create_crate(&conn, name, publish_time));
         }
         join_all(futures).await;
 
@@ -215,10 +215,10 @@ mod tests {
     }
 
     fn create_crate<T: Into<Cow<'static, str>>>(
-        conn: &mut AsyncPgConnection,
+        mut conn: &AsyncPgConnection,
         name: T,
         publish_time: DateTime<Utc>,
-    ) -> impl Future<Output = i32> + use<T> {
+    ) -> impl Future<Output = i32> + use<'_, T> {
         let future = diesel::insert_into(crates::table)
             .values((
                 crates::name.eq(name.into()),
@@ -226,7 +226,7 @@ mod tests {
                 crates::updated_at.eq(publish_time),
             ))
             .returning(crates::id)
-            .get_result(conn);
+            .get_result(&mut conn);
 
         async move { future.await.unwrap() }
     }

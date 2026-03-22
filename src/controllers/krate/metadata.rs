@@ -19,8 +19,6 @@ use axum::Json;
 use axum::extract::{FromRequestParts, Query};
 use diesel::prelude::*;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
-use futures_util::FutureExt;
-use futures_util::future::{BoxFuture, always_ready};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
@@ -127,16 +125,16 @@ pub async fn find_crate(
     let include_default_version =
         include.default_version && !include.versions && default_version.is_some();
     let (versions_and_publishers, default_versions_and_publishers, kws, cats, recent_downloads) = tokio::try_join!(
-        load_versions_and_publishers(&mut conn, &krate, include.versions),
+        load_versions_and_publishers(&conn, &krate, include.versions),
         load_default_versions_and_publishers(
-            &mut conn,
+            &conn,
             &krate,
             default_version.as_deref(),
             include_default_version,
         ),
-        load_keywords(&mut conn, &krate, include.keywords),
-        load_categories(&mut conn, &krate, include.categories),
-        load_recent_downloads(&mut conn, krate.id, include.downloads),
+        load_keywords(&conn, &krate, include.keywords),
+        load_categories(&conn, &krate, include.categories),
+        load_recent_downloads(&conn, krate.id, include.downloads),
     )?;
 
     let ids = versions_and_publishers
@@ -218,95 +216,97 @@ pub async fn find_crate(
 
 type VersionsAndPublishers = (Version, Option<User>);
 
-fn load_versions_and_publishers<'a>(
-    conn: &mut AsyncPgConnection,
-    krate: &'a Crate,
+async fn load_versions_and_publishers(
+    conn: &AsyncPgConnection,
+    krate: &Crate,
     includes: bool,
-) -> BoxFuture<'a, AppResult<Option<Vec<VersionsAndPublishers>>>> {
+) -> AppResult<Option<Vec<VersionsAndPublishers>>> {
     if !includes {
-        return always_ready(|| Ok(None)).boxed();
+        return Ok(None);
     }
 
-    _load_versions_and_publishers(conn, krate, None)
+    _load_versions_and_publishers(conn, krate, None).await
 }
 
-fn load_default_versions_and_publishers<'a>(
-    conn: &mut AsyncPgConnection,
-    krate: &'a Crate,
-    version_num: Option<&'a str>,
+async fn load_default_versions_and_publishers(
+    conn: &AsyncPgConnection,
+    krate: &Crate,
+    version_num: Option<&str>,
     includes: bool,
-) -> BoxFuture<'a, AppResult<Option<Vec<VersionsAndPublishers>>>> {
+) -> AppResult<Option<Vec<VersionsAndPublishers>>> {
     if !includes || version_num.is_none() {
-        return always_ready(|| Ok(None)).boxed();
+        return Ok(None);
     }
 
-    let fut = _load_versions_and_publishers(conn, krate, version_num);
-    async move {
-        let records = fut.await?.ok_or_else(|| {
+    let records = _load_versions_and_publishers(conn, krate, version_num)
+        .await?
+        .ok_or_else(|| {
             version_not_found(
                 &krate.name,
                 version_num.expect("default_version should not be None"),
             )
         })?;
-        Ok(Some(records))
-    }
-    .boxed()
+    Ok(Some(records))
 }
 
-fn load_keywords<'a>(
-    conn: &mut AsyncPgConnection,
-    krate: &'a Crate,
+async fn load_keywords(
+    mut conn: &AsyncPgConnection,
+    krate: &Crate,
     includes: bool,
-) -> BoxFuture<'a, AppResult<Option<Vec<Keyword>>>> {
+) -> AppResult<Option<Vec<Keyword>>> {
     if !includes {
-        return always_ready(|| Ok(None)).boxed();
+        return Ok(None);
     }
 
-    let fut = CrateKeyword::belonging_to(&krate)
+    let kws = CrateKeyword::belonging_to(krate)
         .inner_join(keywords::table)
         .select(Keyword::as_select())
-        .load(conn);
-    async move { Ok(Some(fut.await?)) }.boxed()
+        .load(&mut conn)
+        .await?;
+    Ok(Some(kws))
 }
 
-fn load_categories<'a>(
-    conn: &mut AsyncPgConnection,
-    krate: &'a Crate,
+async fn load_categories(
+    mut conn: &AsyncPgConnection,
+    krate: &Crate,
     includes: bool,
-) -> BoxFuture<'a, AppResult<Option<Vec<Category>>>> {
+) -> AppResult<Option<Vec<Category>>> {
     if !includes {
-        return always_ready(|| Ok(None)).boxed();
+        return Ok(None);
     }
 
-    let fut = CrateCategory::belonging_to(&krate)
+    let cats = CrateCategory::belonging_to(krate)
         .inner_join(categories::table)
         .select(Category::as_select())
-        .load(conn);
-    async move { Ok(Some(fut.await?)) }.boxed()
+        .load(&mut conn)
+        .await?;
+    Ok(Some(cats))
 }
 
-fn load_recent_downloads(
-    conn: &mut AsyncPgConnection,
+async fn load_recent_downloads(
+    mut conn: &AsyncPgConnection,
     crate_id: i32,
     includes: bool,
-) -> BoxFuture<'_, AppResult<Option<i64>>> {
+) -> AppResult<Option<i64>> {
     if !includes {
-        return always_ready(|| Ok(None)).boxed();
+        return Ok(None);
     }
 
-    let fut = recent_crate_downloads::table
+    let downloads = recent_crate_downloads::table
         .filter(recent_crate_downloads::crate_id.eq(crate_id))
         .select(recent_crate_downloads::downloads)
-        .get_result(conn);
-    async move { Ok(fut.await.optional()?) }.boxed()
+        .get_result(&mut conn)
+        .await
+        .optional()?;
+    Ok(downloads)
 }
 
-fn _load_versions_and_publishers<'a>(
-    conn: &mut AsyncPgConnection,
-    krate: &'a Crate,
-    version_num: Option<&'a str>,
-) -> BoxFuture<'a, AppResult<Option<Vec<VersionsAndPublishers>>>> {
-    let mut query = Version::belonging_to(&krate)
+async fn _load_versions_and_publishers(
+    mut conn: &AsyncPgConnection,
+    krate: &Crate,
+    version_num: Option<&str>,
+) -> AppResult<Option<Vec<VersionsAndPublishers>>> {
+    let mut query = Version::belonging_to(krate)
         .left_outer_join(users::table)
         .select(<(Version, Option<User>)>::as_select())
         .order_by(versions::id.desc())
@@ -316,8 +316,8 @@ fn _load_versions_and_publishers<'a>(
         query = query.filter(versions::num.eq(num));
     }
 
-    let fut = query.load(conn);
-    async move { Ok(Some(fut.await?)) }.boxed()
+    let results = query.load(&mut conn).await?;
+    Ok(Some(results))
 }
 
 #[derive(Debug)]

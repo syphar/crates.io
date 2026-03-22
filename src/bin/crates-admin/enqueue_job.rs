@@ -61,7 +61,7 @@ pub async fn run(command: Command) -> Result<()> {
             before
                 .map(jobs::ArchiveVersionDownloads::before)
                 .unwrap_or_default()
-                .enqueue(&mut conn)
+                .enqueue(&conn)
                 .await?;
         }
         Command::CheckTyposquat { name } => {
@@ -78,42 +78,36 @@ pub async fn run(command: Command) -> Result<()> {
                 );
             }
 
-            jobs::CheckTyposquat::new(&name).enqueue(&mut conn).await?;
+            jobs::CheckTyposquat::new(&name).enqueue(&conn).await?;
         }
         Command::CleanProcessedLogFiles => {
-            jobs::CleanProcessedLogFiles.enqueue(&mut conn).await?;
+            jobs::CleanProcessedLogFiles.enqueue(&conn).await?;
         }
         Command::DailyDbMaintenance => {
-            jobs::DailyDbMaintenance.enqueue(&mut conn).await?;
+            jobs::DailyDbMaintenance.enqueue(&conn).await?;
         }
         Command::DumpDb => {
-            jobs::DumpDb.enqueue(&mut conn).await?;
+            jobs::DumpDb.enqueue(&conn).await?;
         }
         Command::GenerateOgImage { names } => {
             for name in names {
-                jobs::GenerateOgImage::new(name).enqueue(&mut conn).await?;
+                jobs::GenerateOgImage::new(name).enqueue(&conn).await?;
             }
         }
         Command::IndexVersionDownloadsArchive => {
-            jobs::IndexVersionDownloadsArchive
-                .enqueue(&mut conn)
-                .await?;
+            jobs::IndexVersionDownloadsArchive.enqueue(&conn).await?;
         }
         Command::NormalizeIndex { dry_run } => {
-            jobs::NormalizeIndex::new(dry_run)
-                .enqueue(&mut conn)
-                .await?;
+            jobs::NormalizeIndex::new(dry_run).enqueue(&conn).await?;
         }
         Command::ProcessCdnLogQueue(job) => {
-            job.enqueue(&mut conn).await?;
+            job.enqueue(&conn).await?;
         }
         Command::SendTokenExpiryNotifications => {
-            jobs::SendTokenExpiryNotifications
-                .enqueue(&mut conn)
-                .await?;
+            jobs::SendTokenExpiryNotifications.enqueue(&conn).await?;
         }
         Command::SquashIndex => {
-            jobs::SquashIndex.enqueue(&mut conn).await?;
+            jobs::SquashIndex.enqueue(&conn).await?;
         }
         Command::SyncAdmins { force } => {
             if !force {
@@ -135,20 +129,20 @@ pub async fn run(command: Command) -> Result<()> {
                 }
             }
 
-            jobs::SyncAdmins.enqueue(&mut conn).await?;
+            jobs::SyncAdmins.enqueue(&conn).await?;
         }
         Command::SyncCratesFeed => {
-            jobs::rss::SyncCratesFeed.enqueue(&mut conn).await?;
+            jobs::rss::SyncCratesFeed.enqueue(&conn).await?;
         }
         Command::SyncUpdatesFeed => {
-            jobs::rss::SyncUpdatesFeed.enqueue(&mut conn).await?;
+            jobs::rss::SyncUpdatesFeed.enqueue(&conn).await?;
         }
         Command::TrustpubCleanup => {
             let job = jobs::trustpub::DeleteExpiredTokens;
-            job.enqueue(&mut conn).await?;
+            job.enqueue(&conn).await?;
 
             let job = jobs::trustpub::DeleteExpiredJtis;
-            job.enqueue(&mut conn).await?;
+            job.enqueue(&conn).await?;
         }
         Command::UpdateDownloads => {
             let count: i64 = background_jobs::table
@@ -163,7 +157,7 @@ pub async fn run(command: Command) -> Result<()> {
                     jobs::UpdateDownloads::JOB_NAME
                 );
             } else {
-                jobs::UpdateDownloads.enqueue(&mut conn).await?;
+                jobs::UpdateDownloads.enqueue(&conn).await?;
             }
         }
     };
