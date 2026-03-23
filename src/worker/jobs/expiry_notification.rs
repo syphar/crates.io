@@ -119,7 +119,7 @@ async fn handle_expiring_token(
 ///
 /// This function returns at most `MAX_ROWS` tokens.
 pub async fn find_expiring_tokens(
-    conn: &mut AsyncPgConnection,
+    mut conn: &AsyncPgConnection,
     before: chrono::DateTime<chrono::Utc>,
 ) -> QueryResult<Vec<ApiToken>> {
     ApiToken::query()
@@ -135,7 +135,7 @@ pub async fn find_expiring_tokens(
         .filter(api_tokens::expiry_notification_at.is_null())
         .order_by(api_tokens::expired_at.asc()) // The most urgent tokens first
         .limit(MAX_ROWS)
-        .get_results(conn)
+        .get_results(&mut conn)
         .await
 }
 
@@ -159,14 +159,14 @@ mod tests {
             .gh_login("a")
             .gh_encrypted_token(&[])
             .build()
-            .insert(&mut conn)
+            .insert(&conn)
             .await?;
 
         NewEmail::builder()
             .user_id(user.id)
             .email("testuser@test.com")
             .build()
-            .insert(&mut conn)
+            .insert(&conn)
             .await?;
 
         let token = PlainToken::generate();

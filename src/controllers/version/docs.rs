@@ -31,11 +31,11 @@ pub async fn rebuild_version_docs(
     let auth = AuthCheck::only_cookie().check(&req, &mut conn).await?;
 
     // validate if version & crate exist
-    let (_, krate) = path.load_version_and_crate(&mut conn).await?;
+    let (_, krate) = path.load_version_and_crate(&conn).await?;
 
     // Check that the user is an owner of the crate, or a team member (= publish rights)
     let user = auth.user();
-    let owners = krate.owners(&mut conn).await?;
+    let owners = krate.owners(&conn).await?;
     let encryption = &app.config.gh_token_encryption;
     if Rights::get(user, &*app.github, &owners, encryption).await? < Rights::Publish {
         return Err(custom(

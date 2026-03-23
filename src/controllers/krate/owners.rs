@@ -42,12 +42,12 @@ pub struct UsersResponse {
     responses((status = 200, description = "Successful Response", body = inline(UsersResponse))),
 )]
 pub async fn list_owners(state: AppState, path: CratePath) -> AppResult<Json<UsersResponse>> {
-    let mut conn = state.db_read().await?;
+    let conn = state.db_read().await?;
 
-    let krate = path.load_crate(&mut conn).await?;
+    let krate = path.load_crate(&conn).await?;
 
     let users = krate
-        .owners(&mut conn)
+        .owners(&conn)
         .await?
         .into_iter()
         .map(Owner::into)
@@ -70,10 +70,10 @@ pub struct TeamsResponse {
     responses((status = 200, description = "Successful Response", body = inline(TeamsResponse))),
 )]
 pub async fn get_team_owners(state: AppState, path: CratePath) -> AppResult<Json<TeamsResponse>> {
-    let mut conn = state.db_read().await?;
-    let krate = path.load_crate(&mut conn).await?;
+    let conn = state.db_read().await?;
+    let krate = path.load_crate(&conn).await?;
 
-    let teams = Team::owning(&krate, &mut conn)
+    let teams = Team::owning(&krate, &conn)
         .await?
         .into_iter()
         .map(Owner::into)
@@ -91,11 +91,11 @@ pub async fn get_team_owners(state: AppState, path: CratePath) -> AppResult<Json
     responses((status = 200, description = "Successful Response", body = inline(UsersResponse))),
 )]
 pub async fn get_user_owners(state: AppState, path: CratePath) -> AppResult<Json<UsersResponse>> {
-    let mut conn = state.db_read().await?;
+    let conn = state.db_read().await?;
 
-    let krate = path.load_crate(&mut conn).await?;
+    let krate = path.load_crate(&conn).await?;
 
-    let users = User::owning(&krate, &mut conn)
+    let users = User::owning(&krate, &conn)
         .await?
         .into_iter()
         .map(Owner::into)
