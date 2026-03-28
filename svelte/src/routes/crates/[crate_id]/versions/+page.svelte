@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { components } from '@crates-io/api-client';
 
+  import { invalidate } from '$app/navigation';
   import { createClient } from '@crates-io/api-client';
   import { format } from 'date-fns';
 
@@ -8,10 +9,22 @@
   import LoadingSpinner from '$lib/components/LoadingSpinner.svelte';
   import * as SortDropdown from '$lib/components/sort-dropdown';
   import Row from '$lib/components/version-list/Row.svelte';
+  import { getSession } from '$lib/utils/session.svelte';
 
   type Version = components['schemas']['Version'];
+  type Owner = components['schemas']['Owner'];
 
   let { data } = $props();
+
+  let session = getSession();
+
+  let owners = $state<Owner[]>([]);
+
+  $effect(() => {
+    data.ownersPromise.then(o => (owners = o));
+  });
+
+  let isOwner = $derived(owners.some(o => o.kind === 'user' && o.id === session.currentUser?.id));
 
   let isLoading = $state(false);
 
@@ -89,12 +102,12 @@
 <ul class="list">
   {#each versions as version (version.id)}
     <li>
-      <!-- TODO: pass isOwner once authenticated user loading is implemented -->
       <Row
         crateName={data.crate.name}
         {version}
         isHighestOfReleaseTrack={isHighestOfReleaseTrack(version)}
-        isOwner={false}
+        {isOwner}
+        onVersionChanged={() => invalidate('versions:data')}
         data-test-version={version.num}
       />
     </li>

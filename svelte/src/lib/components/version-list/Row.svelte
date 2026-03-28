@@ -10,6 +10,7 @@
   import CalendarIcon from '$lib/assets/calendar.svg?component';
   import CheckboxEmptyIcon from '$lib/assets/checkbox-empty.svg?component';
   import CheckboxIcon from '$lib/assets/checkbox.svg?component';
+  import EllipsisCircleIcon from '$lib/assets/ellipsis-circle.svg?component';
   import GitHubIcon from '$lib/assets/github.svg?component';
   import GitLabIcon from '$lib/assets/gitlab.svg?component';
   import LicenseIcon from '$lib/assets/license.svg?component';
@@ -18,9 +19,12 @@
   import WeightIcon from '$lib/assets/weight.svg?component';
   import Edition from '$lib/components/crate-sidebar/Edition.svelte';
   import Msrv from '$lib/components/crate-sidebar/Msrv.svelte';
+  import * as Dropdown from '$lib/components/dropdown';
   import LicenseExpression from '$lib/components/LicenseExpression.svelte';
+  import PrivilegedAction from '$lib/components/PrivilegedAction.svelte';
   import Tooltip from '$lib/components/Tooltip.svelte';
   import UserAvatar from '$lib/components/UserAvatar.svelte';
+  import YankButton from '$lib/components/YankButton.svelte';
 
   const EIGHT_DAYS = 8 * 24 * 60 * 60 * 1000;
 
@@ -39,13 +43,15 @@
     version: Version;
     isHighestOfReleaseTrack?: boolean;
     isOwner?: boolean;
+    onVersionChanged?: () => void | Promise<void>;
   }
 
   let {
     crateName,
     version,
     isHighestOfReleaseTrack = false,
-    // TODO isOwner = false,
+    isOwner = false,
+    onVersionChanged,
     ...others
   }: Props = $props();
 
@@ -270,7 +276,32 @@
     {/if}
   </div>
 
-  <!-- TODO: Port PrivilegedAction with actions menu (yank button, rebuild docs) -->
+  <PrivilegedAction userAuthorised={isOwner} class="actions">
+    <Dropdown.Root class="dropdown" data-test-actions-menu>
+      <Dropdown.Trigger hideArrow class="trigger" data-test-actions-toggle>
+        <EllipsisCircleIcon class="icon" />
+        <span class="sr-only">Actions</span>
+      </Dropdown.Trigger>
+
+      <Dropdown.Menu class="menu">
+        <Dropdown.Item>
+          <YankButton {crateName} {version} onChanged={onVersionChanged} class="button-reset menu-button" />
+        </Dropdown.Item>
+        <Dropdown.Item>
+          <a
+            href={resolve('/crates/[crate_id]/[version_num]/rebuild-docs', {
+              crate_id: crateName,
+              version_num: version.num,
+            })}
+            class="button-reset menu-button"
+            data-test-id="btn-rebuild-docs"
+          >
+            Rebuild Docs
+          </a>
+        </Dropdown.Item>
+      </Dropdown.Menu>
+    </Dropdown.Root>
+  </PrivilegedAction>
 </div>
 
 <style>
@@ -318,6 +349,54 @@
       --bg-color: light-dark(hsl(0, 92%, 90%), hsl(0, 84%, 12%));
       --hover-bg-color: light-dark(hsl(0, 92%, 98%), hsl(0, 10%, 11%));
       --fg-color: light-dark(hsl(0, 84%, 32%), hsl(0, 92%, 90%));
+    }
+
+    :global(.actions) {
+      display: flex;
+    }
+
+    :global(.dropdown) {
+      display: flex;
+      font-size: initial;
+      line-height: 1rem;
+    }
+
+    :global(.icon) {
+      width: 2em;
+      height: auto;
+    }
+
+    :global(.trigger) {
+      background: none;
+      border: none;
+      padding: 0;
+      border-radius: 99999px;
+      color: var(--grey600);
+
+      &:hover {
+        border-radius: 99999px;
+        color: var(--grey900);
+        background-color: white;
+      }
+    }
+
+    :global(.menu) {
+      top: 100%;
+      right: 0;
+      min-width: max-content;
+    }
+
+    :global(.menu-button) {
+      align-items: center;
+      gap: var(--space-2xs);
+      cursor: pointer;
+      text-transform: capitalize;
+
+      &[disabled] {
+        background: linear-gradient(to bottom, var(--bg-color-top-light) 0%, var(--bg-color-bottom-light) 100%);
+        color: var(--disabled-text-color) !important;
+        cursor: not-allowed;
+      }
     }
   }
 
