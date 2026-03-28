@@ -58,6 +58,14 @@ export default http.get('/api/v1/crates', async ({ request }) => {
     crates = crates.filter(crate => ids.includes(crate.name));
   }
 
+  let includeYanked = url.searchParams.get('include_yanked');
+  if (includeYanked !== null && includeYanked !== 'yes') {
+    crates = crates.filter(crate => {
+      let versions = db.version.findMany(q => q.where({ crate: { id: crate.id } }));
+      return versions.some(v => !v.yanked);
+    });
+  }
+
   let sort = url.searchParams.get('sort');
   if (sort === 'alpha') {
     crates = crates.sort((a, b) => compare(a.name.toLowerCase(), b.name.toLowerCase()));

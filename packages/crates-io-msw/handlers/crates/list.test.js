@@ -221,6 +221,37 @@ test('supports a `following` parameter', async function () {
   expect(responsePayload.meta.total).toBe(1);
 });
 
+test('supports `include_yanked` parameter', async function () {
+  let foo = await db.crate.create({ name: 'foo' });
+  await db.version.create({ crate: foo, num: '1.0.0' });
+  let bar = await db.crate.create({ name: 'bar' });
+  await db.version.create({ crate: bar, num: '1.0.0', yanked: true });
+  let baz = await db.crate.create({ name: 'baz' });
+  await db.version.create({ crate: baz, num: '1.0.0' });
+  await db.version.create({ crate: baz, num: '2.0.0', yanked: true });
+
+  // without the parameter, all crates are returned
+  let response = await fetch('/api/v1/crates');
+  expect(response.status).toBe(200);
+  let responsePayload = await response.json();
+  expect(responsePayload.crates.map(it => it.id)).toEqual(['foo', 'bar', 'baz']);
+  expect(responsePayload.meta.total).toBe(3);
+
+  // with `include_yanked=n`, crates with all versions yanked are excluded
+  response = await fetch('/api/v1/crates?include_yanked=n');
+  expect(response.status).toBe(200);
+  responsePayload = await response.json();
+  expect(responsePayload.crates.map(it => it.id)).toEqual(['foo', 'baz']);
+  expect(responsePayload.meta.total).toBe(2);
+
+  // with `include_yanked=yes`, all crates are returned
+  response = await fetch('/api/v1/crates?include_yanked=yes');
+  expect(response.status).toBe(200);
+  responsePayload = await response.json();
+  expect(responsePayload.crates.map(it => it.id)).toEqual(['foo', 'bar', 'baz']);
+  expect(responsePayload.meta.total).toBe(3);
+});
+
 test('supports multiple `ids[]` parameters', async function () {
   let foo = await db.crate.create({ name: 'foo' });
   await db.version.create({ crate: foo });
