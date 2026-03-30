@@ -45,6 +45,8 @@ pub enum TarballError {
     SizeMismatch,
     #[error("unexpected symlink or hard link found: {0}")]
     UnexpectedSymlink(String),
+    #[error("unexpected device file found: {0}")]
+    UnexpectedDevice(String),
     #[error("Cargo.toml manifest is missing")]
     MissingManifest,
     #[error("Cargo.toml manifest is invalid: {0}")]
@@ -109,6 +111,14 @@ pub async fn process_tarball<R: tokio::io::AsyncRead + Unpin>(
         let entry_type = entry.header().entry_type();
         if entry_type.is_hard_link() || entry_type.is_symlink() {
             return Err(TarballError::UnexpectedSymlink(
+                entry_path.display().to_string(),
+            ));
+        }
+        if entry_type.is_character_special()
+            || entry_type.is_block_special()
+            || entry_type.is_fifo()
+        {
+            return Err(TarballError::UnexpectedDevice(
                 entry_path.display().to_string(),
             ));
         }

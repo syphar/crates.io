@@ -1031,6 +1031,9 @@ impl From<TarballError> for BoxedAppError {
             TarballError::UnexpectedSymlink(path) => {
                 bad_request(format!("unexpected symlink or hard link found: {path}"))
             }
+            TarballError::UnexpectedDevice(path) => {
+                bad_request(format!("unexpected device file found: {path}"))
+            }
             TarballError::IO(err) => err.into(),
             TarballError::MissingManifest => {
                 bad_request("uploaded tarball is missing a `Cargo.toml` manifest file")

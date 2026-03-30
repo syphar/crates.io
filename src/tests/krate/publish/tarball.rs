@@ -47,6 +47,46 @@ async fn new_krate_tarball_with_hard_links() {
     assert_that!(app.stored_files().await, is_empty());
 }
 
+async fn new_krate_tarball_with_device_entry(entry_type: tar::EntryType) {
+    let (app, _, _, token) = TestApp::full().with_token().await;
+
+    let tarball = {
+        let mut builder = TarballBuilder::new();
+
+        let mut header = tar::Header::new_gnu();
+        assert_ok!(header.set_path("foo-1.1.0/devfile"));
+        header.set_size(0);
+        header.set_entry_type(entry_type);
+        header.set_cksum();
+        assert_ok!(builder.as_mut().append(&header, &[][..]));
+
+        builder.build()
+    };
+
+    let (json, _tarball) = PublishBuilder::new("foo", "1.1.0").build();
+    let body = PublishBuilder::create_publish_body(&json, &tarball);
+
+    let response = token.publish_crate(body).await;
+    assert_snapshot!(response.status(), @"400 Bad Request");
+    assert_snapshot!(response.text(), @r#"{"errors":[{"detail":"unexpected device file found: foo-1.1.0/devfile"}]}"#);
+    assert_that!(app.stored_files().await, is_empty());
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn new_krate_tarball_with_chardev() {
+    new_krate_tarball_with_device_entry(tar::EntryType::character_special()).await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn new_krate_tarball_with_blockdev() {
+    new_krate_tarball_with_device_entry(tar::EntryType::block_special()).await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn new_krate_tarball_with_fifo() {
+    new_krate_tarball_with_device_entry(tar::EntryType::fifo()).await;
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn empty_body() {
     let (app, _, user) = TestApp::full().with_user().await;
