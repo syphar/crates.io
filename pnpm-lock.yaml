@@ -116,8 +116,8 @@ importers:
         specifier: 5.0.0
         version: 5.0.0(@babel/core@7.29.0)(webpack@5.105.4)
       '@percy/playwright':
-        specifier: 1.0.10
-        version: 1.0.10(playwright-core@1.58.2)
+        specifier: 1.1.0
+        version: 1.1.0(playwright-core@1.58.2)
       '@playwright/test':
         specifier: 1.58.2
         version: 1.58.2
@@ -2451,8 +2451,8 @@ packages:
     resolution: {integrity: sha512-BCJj6rptDDcocI8PqE++gKpaOzhGgkTfzzgjqKxWp7ElQdwe+WL7J/YdCiMzG5EvLYe1ly8gNVMvoWqk+kfjhA==}
     engines: {node: '>=14'}
 
-  '@percy/playwright@1.0.10':
-    resolution: {integrity: sha512-lq2Mbqz/SfguQn4PdbNwApmzZpA/3gWO7STLlyLNYd0r4btGd7Nfxyxkf/t78rgh2ErwGcLUuPbxGPpZ3XXLVw==}
+  '@percy/playwright@1.1.0':
+    resolution: {integrity: sha512-4js7xbz5RqEv/Fee3kypmiwsPsHrXGwGPWR7HWS5iNywh2qfK8O8mI/XfZb+FTFR6Ebi2Cy2vNNiaaoYKCsCPQ==}
     engines: {node: '>=14'}
     peerDependencies:
       playwright-core: '>=1'
@@ -12913,7 +12913,7 @@ snapshots:
       - supports-color
       - typescript
 
-  '@percy/playwright@1.0.10(playwright-core@1.58.2)':
+  '@percy/playwright@1.1.0(playwright-core@1.58.2)':
     dependencies:
       playwright-core: 1.58.2
 
