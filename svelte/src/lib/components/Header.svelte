@@ -1,5 +1,6 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
+  import { format } from 'date-fns/format';
 
   import logo from '$lib/assets/cargo.png';
   import LockIcon from '$lib/assets/lock.svg?component';
@@ -9,6 +10,8 @@
   import LoadingSpinner from './LoadingSpinner.svelte';
   import SearchForm from './SearchForm.svelte';
   import UserAvatar from './UserAvatar.svelte';
+
+  const SUDO_SESSION_DURATION_MS = 6 * 60 * 60 * 1000;
 
   interface Props {
     hero?: boolean;
@@ -21,26 +24,15 @@
   let currentUser = $derived(session.currentUser);
   let isLoggingIn = $derived(session.state === 'logging-in');
   let isLoggingOut = $derived(session.state === 'logging-out');
-
-  // TODO: implement sudo actions
-  const SUDO_SESSION_DURATION_MS = 6 * 60 * 60 * 1000;
-
-  let isSudoEnabled = $state(false);
-  let sudoEnabledUntil = $state<Date | null>(null);
+  let isSudoEnabled = $derived(session.isSudoEnabled);
+  let sudoEnabledUntil = $derived(session.sudoEnabledUntil);
 
   function enableSudo() {
-    isSudoEnabled = true;
-    sudoEnabledUntil = new Date(Date.now() + SUDO_SESSION_DURATION_MS);
+    session.setSudo(SUDO_SESSION_DURATION_MS);
   }
 
   function disableSudo() {
-    isSudoEnabled = false;
-    sudoEnabledUntil = null;
-  }
-
-  function formatTime(date: Date | null): string {
-    if (!date) return '';
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    session.setSudo(0);
   }
 </script>
 
@@ -67,7 +59,7 @@
         <Dropdown.Root data-test-user-menu>
           <Dropdown.Trigger class="button-reset" data-test-toggle>
             {#if isSudoEnabled}
-              <span class="wizard-hat" data-test-wizard-hat>🧙</span>
+              <div class="wizard-hat" data-test-wizard-hat>🧙</div>
             {/if}
 
             <UserAvatar
@@ -97,7 +89,7 @@
                     onclick={disableSudo}
                   >
                     Disable admin actions
-                    <span class="expires-in">expires at {formatTime(sudoEnabledUntil)}</span>
+                    <div class="expires-in">expires at {sudoEnabledUntil ? format(sudoEnabledUntil, 'HH:mm') : ''}</div>
                   </button>
                 {:else}
                   <button
