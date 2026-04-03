@@ -67,8 +67,10 @@ async fn new_krate_tarball_with_device_entry(entry_type: tar::EntryType) {
     let body = PublishBuilder::create_publish_body(&json, &tarball);
 
     let response = token.publish_crate(body).await;
-    assert_snapshot!(response.status(), @"400 Bad Request");
-    assert_snapshot!(response.text(), @r#"{"errors":[{"detail":"unexpected device file found: foo-1.1.0/devfile"}]}"#);
+    insta::allow_duplicates! {
+        assert_snapshot!(response.status(), @"400 Bad Request");
+        assert_snapshot!(response.text(), @r#"{"errors":[{"detail":"unexpected device file found: foo-1.1.0/devfile"}]}"#);
+    }
     assert_that!(app.stored_files().await, is_empty());
 }
 
