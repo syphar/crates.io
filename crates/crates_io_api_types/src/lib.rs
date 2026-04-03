@@ -942,7 +942,7 @@ pub struct EncodableVersion {
     ///
     /// This field may be `null` until the version has been analyzed, which
     /// happens in an asynchronous background job.
-    #[schema(value_type = Object)]
+    #[schema(value_type = Option<HashMap<String, serde_json::Value>>)]
     pub linecounts: Option<serde_json::Value>,
 }
 

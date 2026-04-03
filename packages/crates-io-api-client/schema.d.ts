@@ -1713,7 +1713,9 @@ export interface components {
              *     This field may be `null` until the version has been analyzed, which
              *     happens in an asynchronous background job.
              */
-            linecounts: Record<string, never>;
+            linecounts?: {
+                [key: string]: unknown;
+            } | null;
             /** @description Links to other API endpoints related to this version. */
             links: components["schemas"]["VersionLinks"];
             /**

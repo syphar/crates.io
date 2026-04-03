@@ -1141,8 +1141,15 @@ expression: response.json()
             ]
           },
           "linecounts": {
+            "additionalProperties": {},
             "description": "Line count statistics for this version.\n\nStatus: **Unstable**\n\nThis field may be `null` until the version has been analyzed, which\nhappens in an asynchronous background job.",
-            "type": "object"
+            "propertyNames": {
+              "type": "string"
+            },
+            "type": [
+              "object",
+              "null"
+            ]
           },
           "links": {
             "$ref": "#/components/schemas/VersionLinks",
@@ -1230,8 +1237,7 @@ expression: response.json()
           "links",
           "crate_size",
           "audit_actions",
-          "checksum",
-          "linecounts"
+          "checksum"
         ],
         "type": "object"
       },

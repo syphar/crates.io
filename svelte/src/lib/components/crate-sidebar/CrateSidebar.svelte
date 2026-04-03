@@ -139,7 +139,7 @@
       <div class="linecount" data-test-linecounts>
         <CodeIcon />
         <span>
-          {formatShortNum(version.linecounts.total_code_lines)} SLoC
+          {formatShortNum(Number(version.linecounts.total_code_lines))} SLoC
           <Tooltip>
             Source Lines of Code<br />
             <small>(excluding comments, integration tests and example code)</small>
