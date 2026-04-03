@@ -3,7 +3,9 @@ import { error } from '@sveltejs/kit';
 
 const DEFAULT_PER_PAGE = 100;
 
-export async function load({ fetch, params, url }) {
+export async function load({ fetch, params, url, depends }) {
+  depends('versions:data');
+
   let client = createClient({ fetch });
 
   let crateName = params.crate_id;
