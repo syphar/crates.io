@@ -1090,7 +1090,16 @@ expression: response.json()
             ]
           },
           "features": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
             "description": "The features defined by this version.",
+            "propertyNames": {
+              "type": "string"
+            },
             "type": "object"
           },
           "has_lib": {

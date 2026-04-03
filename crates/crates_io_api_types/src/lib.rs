@@ -850,7 +850,7 @@ pub struct EncodableVersion {
     pub downloads: i32,
 
     /// The features defined by this version.
-    #[schema(value_type = Object)]
+    #[schema(value_type = BTreeMap<String, Vec<String>>)]
     pub features: serde_json::Value,
 
     /// Whether this version has been yanked.

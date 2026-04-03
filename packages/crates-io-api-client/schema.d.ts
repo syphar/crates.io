@@ -1676,7 +1676,9 @@ export interface components {
              */
             edition?: string | null;
             /** @description The features defined by this version. */
-            features: Record<string, never>;
+            features: {
+                [key: string]: string[];
+            };
             /**
              * @description Whether this version can be used as a library.
              * @example true

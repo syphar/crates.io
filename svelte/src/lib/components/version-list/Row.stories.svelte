@@ -22,20 +22,12 @@
 
   // TODO this is supposed to just be `Partial<Version>` but TS is currently unhappy
   // with the type signature of some of the fields derived from the OpenAPI spec.
-  interface VersionOverrides extends Partial<Omit<Version, 'features' | 'trustpub_data' | 'linecounts'>> {
-    features?: Record<string, string[]>;
+  interface VersionOverrides extends Partial<Omit<Version, 'trustpub_data'>> {
     trustpub_data?: TrustpubData | null;
   }
 
   function createVersion(overrides: VersionOverrides = {}): Version {
-    let { features: featuresOverride, trustpub_data: trustpubOverride, ...rest } = overrides;
-    let features = (featuresOverride ?? {
-      default: ['std'],
-      std: [],
-      derive: ['serde_derive'],
-      alloc: [],
-      unstable: [],
-    }) as Version['features'];
+    let { trustpub_data: trustpubOverride, ...rest } = overrides;
 
     return {
       id: 1,
@@ -58,6 +50,13 @@
         dependencies: '/api/v1/crates/serde/1.0.200/dependencies',
         version_downloads: '/api/v1/crates/serde/1.0.200/downloads',
       },
+      features: {
+        default: ['std'],
+        std: [],
+        derive: ['serde_derive'],
+        alloc: [],
+        unstable: [],
+      },
       linecounts: {},
       published_by: {
         id: 1,
@@ -67,7 +66,6 @@
         url: 'https://github.com/dtolnay',
       },
       ...rest,
-      features,
       trustpub_data: trustpubOverride as Version['trustpub_data'],
     };
   }
