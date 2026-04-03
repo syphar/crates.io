@@ -933,7 +933,7 @@ pub struct EncodableVersion {
     ///
     /// The exact structure of this field depends on the `provider` field
     /// inside it.
-    #[schema(value_type = Option<Object>)]
+    #[schema(value_type = Option<HashMap<String, serde_json::Value>>)]
     pub trustpub_data: Option<TrustpubData>,
 
     /// Line count statistics for this version.

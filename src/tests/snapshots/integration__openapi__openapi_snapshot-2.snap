@@ -1186,7 +1186,11 @@ expression: response.json()
             ]
           },
           "trustpub_data": {
+            "additionalProperties": {},
             "description": "Information about the trusted publisher that published this version, if any.\n\nStatus: **Unstable**\n\nThis field is filled if the version was published via trusted publishing\n(e.g., GitHub Actions) rather than a regular API token.\n\nThe exact structure of this field depends on the `provider` field\ninside it.",
+            "propertyNames": {
+              "type": "string"
+            },
             "type": [
               "object",
               "null"

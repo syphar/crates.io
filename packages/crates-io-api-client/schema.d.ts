@@ -1749,7 +1749,9 @@ export interface components {
              *     The exact structure of this field depends on the `provider` field
              *     inside it.
              */
-            trustpub_data?: Record<string, never> | null;
+            trustpub_data?: {
+                [key: string]: unknown;
+            } | null;
             /**
              * Format: date-time
              * @description The date and time this version was last updated (i.e. yanked or unyanked).
