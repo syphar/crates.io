@@ -8,13 +8,7 @@ import Row from './Row.svelte';
 
 type Version = components['schemas']['Version'];
 
-// TODO this is supposed to just be `Partial<Version>` but TS is currently unhappy
-// with the type signature of some of the fields derived from the OpenAPI spec.
-interface VersionOverrides extends Partial<Omit<Version, 'features'>> {
-  features?: Record<string, string[]>;
-}
-
-function createVersion(overrides: VersionOverrides = {}): Version {
+function createVersion(overrides: Partial<Version> = {}): Version {
   return {
     id: 1,
     crate: 'foo',

@@ -11,11 +11,7 @@ import YankButtonTestWrapper from './YankButtonTestWrapper.svelte';
 
 type Version = components['schemas']['Version'];
 
-interface VersionOverrides extends Partial<Omit<Version, 'features'>> {
-  features?: Record<string, string[]>;
-}
-
-function createVersion(overrides: VersionOverrides = {}): Version {
+function createVersion(overrides: Partial<Version> = {}): Version {
   return {
     id: 1,
     crate: 'foo',

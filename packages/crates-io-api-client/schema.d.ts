@@ -1676,7 +1676,9 @@ export interface components {
              */
             edition?: string | null;
             /** @description The features defined by this version. */
-            features: Record<string, never>;
+            features: {
+                [key: string]: string[];
+            };
             /**
              * @description Whether this version can be used as a library.
              * @example true
@@ -1711,7 +1713,9 @@ export interface components {
              *     This field may be `null` until the version has been analyzed, which
              *     happens in an asynchronous background job.
              */
-            linecounts: Record<string, never>;
+            linecounts?: {
+                [key: string]: unknown;
+            } | null;
             /** @description Links to other API endpoints related to this version. */
             links: components["schemas"]["VersionLinks"];
             /**
@@ -1747,7 +1751,9 @@ export interface components {
              *     The exact structure of this field depends on the `provider` field
              *     inside it.
              */
-            trustpub_data?: Record<string, never> | null;
+            trustpub_data?: {
+                [key: string]: unknown;
+            } | null;
             /**
              * Format: date-time
              * @description The date and time this version was last updated (i.e. yanked or unyanked).

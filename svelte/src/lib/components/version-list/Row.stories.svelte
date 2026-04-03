@@ -12,31 +12,7 @@
     component: Row,
   });
 
-  interface TrustpubData {
-    provider: string;
-    repository?: string;
-    run_id?: string;
-    project_path?: string;
-    job_id?: string;
-  }
-
-  // TODO this is supposed to just be `Partial<Version>` but TS is currently unhappy
-  // with the type signature of some of the fields derived from the OpenAPI spec.
-  interface VersionOverrides extends Partial<Omit<Version, 'features' | 'trustpub_data' | 'linecounts'>> {
-    features?: Record<string, string[]>;
-    trustpub_data?: TrustpubData | null;
-  }
-
-  function createVersion(overrides: VersionOverrides = {}): Version {
-    let { features: featuresOverride, trustpub_data: trustpubOverride, ...rest } = overrides;
-    let features = (featuresOverride ?? {
-      default: ['std'],
-      std: [],
-      derive: ['serde_derive'],
-      alloc: [],
-      unstable: [],
-    }) as Version['features'];
-
+  function createVersion(overrides: Partial<Version> = {}): Version {
     return {
       id: 1,
       crate: 'serde',
@@ -58,6 +34,13 @@
         dependencies: '/api/v1/crates/serde/1.0.200/dependencies',
         version_downloads: '/api/v1/crates/serde/1.0.200/downloads',
       },
+      features: {
+        default: ['std'],
+        std: [],
+        derive: ['serde_derive'],
+        alloc: [],
+        unstable: [],
+      },
       linecounts: {},
       published_by: {
         id: 1,
@@ -66,9 +49,7 @@
         avatar: 'https://avatars.githubusercontent.com/u/1940490?v=4',
         url: 'https://github.com/dtolnay',
       },
-      ...rest,
-      features,
-      trustpub_data: trustpubOverride as Version['trustpub_data'],
+      ...overrides,
     };
   }
 </script>
