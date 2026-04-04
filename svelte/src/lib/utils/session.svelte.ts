@@ -121,12 +121,8 @@ export class SessionState {
     if (user?.is_admin) {
       let stored = localStorage.getItem(SUDO_KEY);
       if (stored) {
-        let remaining = Number(stored) - Date.now();
-        if (remaining > 0) {
-          this.setSudo(remaining);
-        } else {
-          localStorage.removeItem(SUDO_KEY);
-        }
+        let remaining = Math.max(0, Number(stored) - Date.now());
+        this.setSudo(remaining);
       }
     } else {
       this.#clearSudo();
