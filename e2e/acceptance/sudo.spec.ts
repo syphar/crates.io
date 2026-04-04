@@ -56,9 +56,7 @@ test.describe('Acceptance | sudo', { tag: '@acceptance' }, () => {
 
     // Test that the fieldset is present and disabled.
     await expect(page.locator('[data-test-placeholder-fieldset]').first()).toBeVisible();
-    // NOTE: `toBeDisabled()` is not working as expected because the element is not a form control element.
-    // Ref: https://github.com/microsoft/playwright/issues/13583#issuecomment-1101704985
-    await expect(page.locator('[data-test-placeholder-fieldset]').first()).toHaveAttribute('disabled', 'disabled');
+    await expect(page.locator('[data-test-placeholder-fieldset]').first()).toHaveAttribute('disabled');
 
     await expect(page.locator('[data-test-actions-toggle]')).toBeDisabled();
     await expect(page.locator('[data-test-version-yank-button="0.1.0"]')).toBeHidden();

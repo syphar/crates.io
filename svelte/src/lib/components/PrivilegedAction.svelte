@@ -3,9 +3,7 @@
   import type { HTMLAttributes } from 'svelte/elements';
 
   import Tooltip from '$lib/components/Tooltip.svelte';
-
-  // TODO: integrate with session's sudo mode once implemented
-  // import { getSession } from '$lib/utils/session.svelte';
+  import { getSession } from '$lib/utils/session.svelte';
 
   /**
    * A component that wraps elements (probably mostly buttons in practice) that
@@ -44,9 +42,9 @@
 
   let { userAuthorised, children, placeholder, unprivileged, ...others }: Props = $props();
 
-  // TODO: check session for admin/sudo status
-  let isPrivileged = $derived(userAuthorised);
-  let canBePrivileged = $derived(false);
+  let session = getSession();
+  let isPrivileged = $derived(userAuthorised || session.isSudoEnabled);
+  let canBePrivileged = $derived(!userAuthorised && (session.currentUser?.is_admin ?? false) && !session.isSudoEnabled);
 </script>
 
 {#if isPrivileged}

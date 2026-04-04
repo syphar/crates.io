@@ -5,10 +5,12 @@ import { createContext } from 'svelte';
 import { invalidateAll } from '$app/navigation';
 import { resolve } from '$app/paths';
 import { createClient } from '@crates-io/api-client';
+import { SvelteDate } from 'svelte/reactivity';
 
 import * as localStorage from './local-storage';
 
 const LOGIN_KEY = 'isLoggedIn';
+const SUDO_KEY = 'sudo';
 
 const POPUP_FEATURES = [
   'width=1000',
@@ -93,15 +95,19 @@ export class SessionState {
    */
   initialPromise: Promise<void> | null = null;
 
-  // TODO: implement sudo mode (`sudoEnabledUntil`, `isSudoEnabled`, `setSudo()`)
-  //   Sudo mode enables admin actions for a limited duration. The expiry
-  //   timestamp is persisted in localStorage under the 'sudo' key so it
-  //   survives page reloads. On user load, the stored expiry is checked
-  //   and sudo mode is restored if still valid.
+  sudoEnabledUntil: Date | null = $state(null);
+
+  get isSudoEnabled(): boolean {
+    return (
+      (this.currentUser?.is_admin ?? false) && this.sudoEnabledUntil != null && this.sudoEnabledUntil > new SvelteDate()
+    );
+  }
+
   // TODO: integrate with Sentry (`sentry.setUser({ id })` after loading user)
 
   #client: ApiClient;
   #notifications?: NotificationsContext;
+  #sudoTimeout: ReturnType<typeof setTimeout> | null = null;
 
   constructor(client: ApiClient, notifications?: NotificationsContext) {
     this.#client = client;
@@ -111,6 +117,43 @@ export class SessionState {
   setUser(user: AuthenticatedUser | null): void {
     this.state = user ? 'logged-in' : 'logged-out';
     this.currentUser = user;
+
+    if (user?.is_admin) {
+      let stored = localStorage.getItem(SUDO_KEY);
+      if (stored) {
+        let remaining = Math.max(0, Number(stored) - Date.now());
+        this.setSudo(remaining);
+      }
+    } else {
+      this.#clearSudo();
+    }
+  }
+
+  setSudo(durationMs: number): void {
+    if (!this.currentUser?.is_admin) return;
+
+    if (this.#sudoTimeout != null) {
+      clearTimeout(this.#sudoTimeout);
+      this.#sudoTimeout = null;
+    }
+
+    if (durationMs > 0) {
+      let expiry = Date.now() + durationMs;
+      localStorage.setItem(SUDO_KEY, String(expiry));
+      this.sudoEnabledUntil = new SvelteDate(expiry);
+      this.#sudoTimeout = setTimeout(() => this.#clearSudo(), durationMs);
+    } else {
+      this.#clearSudo();
+    }
+  }
+
+  #clearSudo(): void {
+    if (this.#sudoTimeout != null) {
+      clearTimeout(this.#sudoTimeout);
+      this.#sudoTimeout = null;
+    }
+    localStorage.removeItem(SUDO_KEY);
+    this.sudoEnabledUntil = null;
   }
 
   /**
@@ -177,6 +220,7 @@ export class SessionState {
     try {
       await this.#client.DELETE('/api/private/session');
     } finally {
+      this.#clearSudo();
       localStorage.removeItem(LOGIN_KEY);
 
       // Full page navigation to ensure all in-memory state is cleared on logout.
