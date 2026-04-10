@@ -34,7 +34,7 @@ jobs:
         id: app-token
         with:
           app-id: ${{ vars.WORKFLOWS_CRATES_IO_APP_ID }}
-          private-key: ${{ secrets.WORKFLOWS_CRATES_IO_PRIVATE_KEY }}
+          private-key: ${{ secrets.WORKFLOWS_CRATES_IO_PRIVATE_KEY }}  # zizmor: ignore[secrets-outside-env] repository write access is already the effective boundary; an environment adds no meaningful protection
 
       - name: Get GitHub App User ID
         id: get-user-id
