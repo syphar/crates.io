@@ -158,4 +158,14 @@ describe('NotificationsState', () => {
 
     expect(state.content[0]?.clearDuration).toBe(5000);
   });
+
+  it('onDismiss fires when a notification is removed', () => {
+    let state = new NotificationsState();
+
+    let onDismiss = vi.fn();
+    let notification = state.info('Message', { onDismiss });
+
+    state.removeNotification(notification);
+    expect(onDismiss).toHaveBeenCalledExactlyOnceWith(notification);
+  });
 });
