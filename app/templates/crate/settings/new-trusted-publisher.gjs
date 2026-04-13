@@ -124,7 +124,7 @@ import WorkflowVerification from 'crates-io/components/workflow-verification';
               Please enter a workflow filename.
             </div>
           {{else}}
-            <div class='note'>
+            <div class='note' data-test-note>
               The filename of the publishing workflow. This file should be present in the
               <code>
                 {{#if @controller.repository}}
@@ -259,7 +259,7 @@ import WorkflowVerification from 'crates-io/components/workflow-verification';
               Please enter a workflow filepath.
             </div>
           {{else}}
-            <div class='note'>
+            <div class='note' data-test-note>
               The filepath to the GitLab CI configuration file, relative to the
               {{#if @controller.repository}}<a
                   href='https://gitlab.com/{{@controller.repository}}/'
