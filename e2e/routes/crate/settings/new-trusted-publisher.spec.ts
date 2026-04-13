@@ -401,7 +401,7 @@ test.describe('Route | crate.settings.new-trusted-publisher', { tag: '@routes' }
       await expect(page.locator('[data-test-cancel]')).toBeVisible();
 
       await expect(page.locator('[data-test-workflow-group] [data-test-note]')).toHaveText(
-        'The filepath to the GitLab CI configuration file, relative to the repository configured above root. For example: .gitlab-ci.yml or ci/publish.yml.',
+        'The filepath to the GitLab CI configuration file, relative to the root of the repository configured above. For example: .gitlab-ci.yml or ci/publish.yml.',
       );
 
       // Fill in the repository fields and confirm the note updates
@@ -409,7 +409,7 @@ test.describe('Route | crate.settings.new-trusted-publisher', { tag: '@routes' }
       await page.fill('[data-test-project]', 'crates.io');
 
       await expect(page.locator('[data-test-workflow-group] [data-test-note]')).toHaveText(
-        'The filepath to the GitLab CI configuration file, relative to the rust-lang/crates.io repository root. For example: .gitlab-ci.yml or ci/publish.yml.',
+        'The filepath to the GitLab CI configuration file, relative to the root of the rust-lang/crates.io repository. For example: .gitlab-ci.yml or ci/publish.yml.',
       );
 
       await page.fill('[data-test-workflow]', '.gitlab-ci.yml');
