@@ -255,7 +255,7 @@
       {#if workflowInvalid}
         <div class="form-group-error" data-test-error>Please enter a workflow filename.</div>
       {:else}
-        <div class="note">
+        <div class="note" data-test-note>
           The filename of the publishing workflow. This file should be present in the
           <code>
             {#if repository}
@@ -272,8 +272,7 @@
           {#if repository}
             <a href="https://github.com/{repository}/" target="_blank" rel="noopener noreferrer">{repository}</a>
           {/if}
-          repository{#if !repository}
-            configured above{/if}. For example:
+          repository{repository ? '' : ' configured above'}. For example:
           <code>release.yml</code>
           or
           <code>publish.yml</code>.
@@ -372,14 +371,12 @@
       {#if workflowInvalid}
         <div class="form-group-error" data-test-error>Please enter a workflow filepath.</div>
       {:else}
-        <div class="note">
-          The filepath to the GitLab CI configuration file, relative to the
+        <div class="note" data-test-note>
+          The filepath to the GitLab CI configuration file, relative to the root of the
           {#if repository}
             <a href="https://gitlab.com/{repository}/" target="_blank" rel="noopener noreferrer">{repository}</a>
           {/if}
-          repository{#if !repository}
-            configured above{/if}
-          root. For example:
+          repository{repository ? '' : ' configured above'}. For example:
           <code>.gitlab-ci.yml</code>
           or
           <code>ci/publish.yml</code>.
